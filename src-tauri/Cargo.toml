@@ -1,6 +1,6 @@
 [package]
 name = "clipforge"
-version = "0.3.0"
+version = "0.4.0"
 description = "Local game clip recorder for Linux"
 license = "GPL-2.0-only"
 authors = ["maf"]

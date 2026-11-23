@@ -14,6 +14,8 @@ export interface AudioSettings {
   micEnabled: boolean;
   micDevice: string | null;
   micVolume: number;
+  /** Experimental: lift a quiet mic toward the desktop level in the mix. */
+  micAutoGain: boolean;
 }
 
 export interface SavedMonitor {
@@ -62,6 +64,11 @@ export interface RecorderStatus {
   micActive: boolean;
   desktopAudioActive: boolean;
   error: string | null;
+}
+
+export interface MicLevel {
+  rmsDb: number;
+  peakDb: number;
 }
 
 export interface AudioDevice {

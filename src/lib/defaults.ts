@@ -1,6 +1,6 @@
 import type { RecorderStatus, Settings } from "./types";
 
-export const APP_VERSION = "0.3.0";
+export const APP_VERSION = "0.4.0";
 
 export const DEFAULT_HOTKEYS = {
   saveClip: "ALT+c",
@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: Settings = {
     micEnabled: true,
     micDevice: null,
     micVolume: 1,
+    micAutoGain: true,
   },
   hotkeys: DEFAULT_HOTKEYS,
   captureMonitor: null,

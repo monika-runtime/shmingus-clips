@@ -40,7 +40,7 @@ impl Default for Hotkeys {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 pub struct AudioSettings {
     pub desktop_enabled: bool,
     /// 0.0 ..= 2.0 (2.0 = +6 dB headroom)
@@ -49,6 +49,9 @@ pub struct AudioSettings {
     /// PulseAudio/PipeWire source id or name, `None` = default source.
     pub mic_device: Option<String>,
     pub mic_volume: f32,
+    /// Experimental: lift a quiet microphone toward the desktop level in the
+    /// mixed track at save time. The isolated tracks stay untouched.
+    pub mic_auto_gain: bool,
 }
 
 impl Default for AudioSettings {
@@ -59,6 +62,7 @@ impl Default for AudioSettings {
             mic_enabled: true,
             mic_device: None,
             mic_volume: 1.0,
+            mic_auto_gain: true,
         }
     }
 }
@@ -187,6 +191,16 @@ pub struct AudioDevice {
     /// True for monitor (loopback) sources - these carry desktop audio.
     pub is_monitor: bool,
     pub is_default: bool,
+}
+
+/// A short measurement of the microphone input, for the level meter.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MicLevel {
+    /// Mean level over the sample window, in dBFS (negative; -inf clamps low).
+    pub rms_db: f32,
+    /// Highest sample in the window, in dBFS.
+    pub peak_db: f32,
 }
 
 // ---------------------------------------------------------------------------

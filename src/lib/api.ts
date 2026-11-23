@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import type {
   AudioDevice,
+  MicLevel,
   AuthStatus,
   Clip,
   EnvironmentReport,
@@ -27,6 +28,7 @@ export const api = {
   checkEnvironment: () => invoke<EnvironmentReport>("check_environment"),
   runSelftest: () => invoke<SelfTestReport>("run_selftest"),
   getAudioDevices: () => invoke<AudioDevice[]>("get_audio_devices"),
+  micLevel: () => invoke<MicLevel | null>("mic_level"),
 
   getRecorderStatus: () => invoke<RecorderStatus>("get_recorder_status"),
   startBuffer: () => invoke<RecorderStatus>("start_buffer"),

@@ -12,8 +12,10 @@ Tauri 2 + React frontend.
 - **Replay buffer** - captures one monitor through the ScreenCast portal via
   PipeWire, encodes with NVENC when available (x264 fallback), and keeps 5–300s
   of footage in 1-second MPEG-TS fragments.
-- **Two audio tracks** - desktop audio (default sink monitor) and microphone are
-  recorded as separate AAC tracks in the saved MP4, each with its own volume.
+- **Mixed audio, separate tracks** - clips start with a desktop + microphone mix
+  that every player understands, followed by the isolated desktop and microphone
+  AAC tracks for editing. An optional experimental setting lifts a quiet mic
+  toward the game audio in the mix.
 - **Global hotkey** - saves the last N seconds (`ALT+c` by default) through
   the GlobalShortcuts portal, so it works while a game has focus.
 - **Audible confirmation** - a short chime plays when a clip is saved, so you

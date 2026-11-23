@@ -184,6 +184,7 @@ pub fn remux_clip_mp4(
     start_ms: u64,
     duration_ms: u64,
     audio_streams: usize,
+    auto_gain: bool,
 ) -> Result<()> {
     if audio_streams != 2 {
         return remux_mp4(input, out, start_ms, duration_ms);
@@ -194,6 +195,22 @@ pub fn remux_clip_mp4(
 
     let start = format!("{:.3}", start_ms as f64 / 1000.0);
     let duration = format!("{:.3}", duration_ms as f64 / 1000.0);
+
+    // Experimental: a quiet microphone disappears under game audio once the
+    // tracks are summed. Measure both tracks and lift the mic toward the
+    // desktop level, capped, and only when the mic actually carries signal.
+    let gain_db = if auto_gain { auto_gain_db(input) } else { 0.0 };
+    let filter = if gain_db > 0.05 {
+        format!(
+            "[0:a:1]volume={gain_db:.1}dB[mic];\
+             [0:a:0][mic]amix=inputs=2:duration=longest:normalize=0,\
+             alimiter=limit=0.95:level=false[mix]"
+        )
+    } else {
+        "[0:a:0][0:a:1]amix=inputs=2:duration=longest:normalize=0,\
+         alimiter=limit=0.95:level=false[mix]"
+            .to_string()
+    };
 
     let mut args: Vec<&std::ffi::OsStr> = vec!["-y".as_ref(), "-ss".as_ref(), start.as_ref()];
     if duration_ms > 0 {
@@ -206,8 +223,7 @@ pub fn remux_clip_mp4(
         // normalize=0 keeps the recorded levels; the limiter only stops the sum
         // from clipping when game audio and voice peak together.
         "-filter_complex".as_ref(),
-        "[0:a:0][0:a:1]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.95:level=false[mix]"
-            .as_ref(),
+        filter.as_ref(),
         "-map".as_ref(),
         "0:v:0".as_ref(),
         "-map".as_ref(),
@@ -241,6 +257,43 @@ pub fn remux_clip_mp4(
 
     run("ffmpeg", &args)?;
     Ok(())
+}
+
+/// How much to lift the microphone in the mix, in dB. Zero when the setting is
+/// off, when either track cannot be measured, or when the mic is quiet enough
+/// to be silence (boosting noise would be worse than leaving it).
+fn auto_gain_db(input: &Path) -> f32 {
+    const SILENT_DB: f32 = -55.0;
+    const MAX_GAIN_DB: f32 = 12.0;
+
+    let (Some(desktop), Some(mic)) = (mean_volume_db(input, 0), mean_volume_db(input, 1)) else {
+        return 0.0;
+    };
+    if mic < SILENT_DB {
+        return 0.0;
+    }
+    let gain = (desktop - mic).clamp(0.0, MAX_GAIN_DB);
+    if gain >= 0.5 {
+        log::info!(
+            "microphone auto gain: desktop {desktop:.1} dB, mic {mic:.1} dB, boosting {gain:.1} dB"
+        );
+    }
+    gain
+}
+
+fn mean_volume_db(input: &Path, track: usize) -> Option<f32> {
+    let map = format!("0:a:{track}");
+    let output = Command::new("ffmpeg")
+        .args(["-hide_banner", "-nostats", "-i"])
+        .arg(input)
+        .args(["-map", &map, "-af", "volumedetect", "-f", "null", "-"])
+        .output()
+        .ok()?;
+    let text = String::from_utf8_lossy(&output.stderr);
+    text.lines()
+        .find_map(|line| line.split("mean_volume:").nth(1))
+        .and_then(|value| value.trim().strip_suffix(" dB"))
+        .and_then(|value| value.trim().parse::<f32>().ok())
 }
 
 /// Copy a finished clip somewhere else, keeping every stream intact.

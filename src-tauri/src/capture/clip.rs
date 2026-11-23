@@ -84,8 +84,16 @@ pub async fn save(
         let work_dir = work_dir.clone();
         let out_path = out_path.clone();
         let thumbnail = thumbnail.clone();
+        let auto_gain = settings.audio.mic_auto_gain;
         tokio::task::spawn_blocking(move || {
-            assemble(&parts, &work_dir, &out_path, &thumbnail, requested_ms)
+            assemble(
+                &parts,
+                &work_dir,
+                &out_path,
+                &thumbnail,
+                requested_ms,
+                auto_gain,
+            )
         })
         .await
         .map_err(|err| AppError::Capture(format!("clip render task failed: {err}")))??
@@ -124,6 +132,7 @@ pub fn assemble(
     out_mp4: &Path,
     thumbnail: &Path,
     requested_ms: u64,
+    auto_gain: bool,
 ) -> Result<MediaProbe> {
     if parts.is_empty() {
         return Err(AppError::Capture("there are no segments to save".into()));
@@ -154,6 +163,7 @@ pub fn assemble(
             0,
             duration_ms,
             joined.audio_streams,
+            auto_gain,
         )?;
         let _ = std::fs::remove_file(&concat_path);
 

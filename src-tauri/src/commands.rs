@@ -9,8 +9,8 @@ use tauri::{AppHandle, State};
 
 use crate::error::Result;
 use crate::model::{
-    AudioDevice, AuthStatus, Clip, EnvironmentReport, GameInfo, RecorderStatus, SavedMonitor,
-    SelfTestReport, Settings, ShareInfo, ShareServerStatus,
+    AudioDevice, AuthStatus, Clip, EnvironmentReport, GameInfo, MicLevel, RecorderStatus,
+    SavedMonitor, SelfTestReport, Settings, ShareInfo, ShareServerStatus,
 };
 use crate::state::AppState;
 use crate::{auth, diagnostics, events, sharing, shortcuts};
@@ -72,6 +72,17 @@ pub async fn run_selftest() -> Result<SelfTestReport> {
 #[tauri::command]
 pub async fn get_audio_devices() -> Result<Vec<AudioDevice>> {
     Ok(crate::capture::audio::list_devices())
+}
+
+/// A short measurement of the selected microphone, for the Settings level
+/// meter. Returns `None` when the mic is off or cannot be sampled.
+#[tauri::command]
+pub async fn mic_level(state: State<'_, AppState>) -> Result<Option<MicLevel>> {
+    let settings = state.settings.get();
+    if !settings.audio.mic_enabled {
+        return Ok(None);
+    }
+    crate::capture::audio::mic_level(settings.audio.mic_device).await
 }
 
 #[tauri::command]

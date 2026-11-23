@@ -1,8 +1,7 @@
 .app {
   display: grid;
   grid-template-columns: var(--rail-width) minmax(0, 1fr);
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 /* ------------------------------------------------------------------ */
@@ -10,6 +9,9 @@
 /* ------------------------------------------------------------------ */
 
 .rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -170,8 +172,7 @@
 
 .main {
   position: relative;
-  height: 100vh;
-  overflow-y: auto;
+  min-height: 100vh;
   overflow-x: hidden;
 }
 
@@ -198,7 +199,7 @@
     rgba(255, 138, 61, 0.13),
     rgba(255, 138, 61, 0.045)
   );
-  backdrop-filter: blur(10px);
+  background-color: var(--bg-soft);
 }
 
 .banner__icon {

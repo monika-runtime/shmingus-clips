@@ -32,11 +32,13 @@ import { Slider } from "../components/ui/Slider";
 import { Spinner } from "../components/ui/Spinner";
 import { Switch } from "../components/ui/Switch";
 import { backend, chooseDirectory, isDesktop } from "../lib/bridge";
+import { cx } from "../lib/cx";
 import { APP_VERSION, DEFAULT_HOTKEYS } from "../lib/defaults";
 import { errorMessage } from "../lib/errors";
 import { formatBytes, pluralize, signature } from "../lib/format";
 import { previewAuthSample } from "../lib/preview";
 import { checkForUpdate, downloadAndInstall, type UpdateInfo } from "../lib/updates";
+import type { MicLevel } from "../lib/types";
 import {
   applyTheme,
   storedTheme,
@@ -154,6 +156,12 @@ function SettingRow({
   );
 }
 
+/** Map a dBFS value onto the meter: -60 dB is empty, 0 dB is full. */
+function micLevelPercent(db: number | undefined): number {
+  if (db === undefined || !Number.isFinite(db)) return 0;
+  return Math.max(0, Math.min(100, ((db + 60) / 60) * 100));
+}
+
 export function SettingsScreen() {
   const {
     settings,
@@ -197,6 +205,8 @@ export function SettingsScreen() {
   const [updateInstalling, setUpdateInstalling] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const [updateChecked, setUpdateChecked] = useState(false);
+  const [micLevel, setMicLevel] = useState<MicLevel | null>(null);
+  const [micLevelChecked, setMicLevelChecked] = useState(false);
 
   async function checkUpdates() {
     setUpdateChecking(true);
@@ -251,6 +261,38 @@ export function SettingsScreen() {
       active = false;
     };
   }, []);
+
+  // Sample the microphone while the Audio section is open, so a quiet or
+  // missing input is visible before recording instead of after.
+  useEffect(() => {
+    if (!desktop || settingsSection !== "audio" || !settings?.audio.micEnabled) {
+      setMicLevel(null);
+      setMicLevelChecked(false);
+      return;
+    }
+    let active = true;
+    setMicLevelChecked(false);
+    const poll = () => {
+      backend
+        .micLevel()
+        .then((level) => {
+          if (!active) return;
+          setMicLevel(level);
+          setMicLevelChecked(true);
+        })
+        .catch(() => {
+          if (!active) return;
+          setMicLevel(null);
+          setMicLevelChecked(true);
+        });
+    };
+    poll();
+    const timer = window.setInterval(poll, 1200);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [desktop, settingsSection, settings?.audio.micEnabled, settings?.audio.micDevice]);
 
   // Ask the backend for the Authentik session whenever Sharing is opened, so
   // the card reflects a sign-in that happened outside this screen.
@@ -697,6 +739,57 @@ export function SettingsScreen() {
                 disabled={!draft.audio.micEnabled}
                 onChange={(value) =>
                   patch({ audio: { ...draft.audio, micVolume: value } })
+                }
+              />
+              {draft.audio.micEnabled && (
+                <div className="mic-meter">
+                  <div className="mic-meter__head">
+                    <span className="micro-label">Input level</span>
+                    <span className="mic-meter__value">
+                      {micLevel
+                        ? `${Math.round(micLevel.peakDb)} dB peak`
+                        : micLevelChecked
+                          ? "no signal"
+                          : "measuring…"}
+                    </span>
+                  </div>
+                  <div
+                    className="mic-meter__track"
+                    role="meter"
+                    aria-label="Microphone input level"
+                    aria-valuemin={-60}
+                    aria-valuemax={0}
+                    aria-valuenow={
+                      micLevel ? Math.round(micLevel.peakDb) : undefined
+                    }
+                  >
+                    <span
+                      className={cx(
+                        "mic-meter__fill",
+                        micLevel && micLevel.peakDb > -6 && "is-hot",
+                        micLevel && micLevel.peakDb < -40 && "is-quiet",
+                      )}
+                      style={{ width: `${micLevelPercent(micLevel?.peakDb)}%` }}
+                    />
+                  </div>
+                  <p className="mic-meter__hint">
+                    {!micLevelChecked
+                      ? "Measuring the microphone…"
+                      : micLevel === null
+                        ? "No microphone signal. Check the system input volume and the device above."
+                        : micLevel.peakDb < -40
+                          ? "Very quiet. Raise the system input volume, or the microphone volume above."
+                          : "Speak normally; the bar should reach the middle."}
+                  </p>
+                </div>
+              )}
+              <Switch
+                label="Even out the microphone level (experimental)"
+                description="At save time, lift a quiet microphone toward the game audio in the mixed track. The separate microphone track stays untouched."
+                checked={draft.audio.micAutoGain}
+                disabled={!draft.audio.micEnabled}
+                onChange={(next) =>
+                  patch({ audio: { ...draft.audio, micAutoGain: next } })
                 }
               />
             </Panel>

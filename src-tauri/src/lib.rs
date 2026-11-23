@@ -206,6 +206,7 @@ pub fn run() {
             commands::check_environment,
             commands::run_selftest,
             commands::get_audio_devices,
+            commands::mic_level,
             commands::get_recorder_status,
             commands::start_buffer,
             commands::stop_buffer,

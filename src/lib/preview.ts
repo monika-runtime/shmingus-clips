@@ -4,6 +4,7 @@ import type {
   Clip,
   EnvironmentReport,
   GameInfo,
+  MicLevel,
   RecorderStatus,
   SavedMonitor,
   SelfTestReport,
@@ -107,6 +108,7 @@ let settings: Settings = {
     micEnabled: true,
     micDevice: "alsa_input.pci-0000_00_1f.3.analog-stereo",
     micVolume: 1,
+    micAutoGain: true,
   },
   hotkeys: { ...DEFAULT_HOTKEYS },
   captureMonitor: {
@@ -514,6 +516,10 @@ export const previewBackend = {
         { name: "Generate thumbnail", ok: true, detail: "640 px JPEG at 1.0 s" },
       ],
     };
+  },
+
+  async micLevel(): Promise<MicLevel | null> {
+    return { rmsDb: -26.5 + Math.sin(Date.now() / 700) * 8, peakDb: -12 };
   },
 
   async getAudioDevices(): Promise<AudioDevice[]> {

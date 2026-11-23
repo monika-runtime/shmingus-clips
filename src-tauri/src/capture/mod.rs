@@ -834,7 +834,7 @@ async fn run_selftest(
             let out = out.clone();
             let thumbnail = thumbnail.clone();
             tokio::task::spawn_blocking(move || {
-                clip::assemble(&parts, &work_dir, &out, &thumbnail, 6000)
+                clip::assemble(&parts, &work_dir, &out, &thumbnail, 6000, false)
             })
             .await
             .map_err(|err| AppError::Capture(format!("selftest render task failed: {err}")))??

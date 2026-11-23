@@ -36,6 +36,7 @@ export const backend = {
   runSelftest: () => call(api.runSelftest, previewBackend.runSelftest),
   getAudioDevices: () =>
     call(api.getAudioDevices, previewBackend.getAudioDevices),
+  micLevel: () => call(api.micLevel, previewBackend.micLevel),
 
   getRecorderStatus: () =>
     call(api.getRecorderStatus, previewBackend.getRecorderStatus),

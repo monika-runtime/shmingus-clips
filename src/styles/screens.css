@@ -611,7 +611,6 @@
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(9, 12, 15, 0.62);
   color: var(--text);
-  backdrop-filter: blur(4px);
 }
 
 .icon-btn.clip-card__star:hover:not(:disabled) {
@@ -1215,7 +1214,6 @@
   border-radius: var(--radius-md);
   background: rgba(21, 26, 32, 0.92);
   box-shadow: var(--shadow-pop);
-  backdrop-filter: blur(12px);
 }
 
 .savebar__status {
@@ -1804,4 +1802,59 @@
   margin-top: 2px;
   color: var(--text-muted);
   font-size: 12.5px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Microphone level meter                                              */
+/* ------------------------------------------------------------------ */
+
+.mic-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 0 4px;
+}
+
+.mic-meter__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mic-meter__value {
+  color: var(--text-faint);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mic-meter__track {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+}
+
+.mic-meter__fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  transition: width 120ms linear;
+}
+
+.mic-meter__fill.is-quiet {
+  background: var(--warn);
+}
+
+.mic-meter__fill.is-hot {
+  background: var(--danger);
+}
+
+.mic-meter__hint {
+  color: var(--text-faint);
+  font-size: 11.5px;
 }

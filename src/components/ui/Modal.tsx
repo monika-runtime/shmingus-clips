@@ -21,6 +21,7 @@ let scrollLocks = 0;
 function lockScroll() {
   scrollLocks += 1;
   if (scrollLocks === 1) {
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
   }
 }
@@ -28,6 +29,7 @@ function lockScroll() {
 function unlockScroll() {
   scrollLocks = Math.max(0, scrollLocks - 1);
   if (scrollLocks === 0) {
+    document.documentElement.style.overflow = "";
     document.body.style.overflow = "";
   }
 }
