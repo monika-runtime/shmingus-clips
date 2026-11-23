@@ -190,6 +190,38 @@ pub fn list_shares() -> HashMap<String, ShareInfo> {
     store().all()
 }
 
+/// Keep the public page in step with a rename. Best effort: the caller has
+/// already renamed the clip locally and only needs to warn when this fails.
+pub async fn update_share_title(clip_id: &str, title: &str, settings: &Settings) -> Result<()> {
+    let Some(record) = store().record(clip_id) else {
+        return Ok(());
+    };
+    let credential = upload_auth(settings).await?;
+    let client = client(Duration::from_secs(8))?;
+    let url = format!("{}/api/shares/{}", record.base_url, record.share.id);
+    let response = client
+        .patch(&url)
+        .bearer_auth(credential.token())
+        .json(&serde_json::json!({ "title": title }))
+        .send()
+        .await
+        .map_err(|err| {
+            AppError::msg(format!("Could not reach the share server at {url}: {err}"))
+        })?;
+
+    if response.status().is_success() {
+        return Ok(());
+    }
+    let status = response.status();
+    let detail = response.text().await.unwrap_or_default();
+    let detail = detail.trim();
+    Err(AppError::msg(if detail.is_empty() {
+        format!("The share server refused the rename ({status}).")
+    } else {
+        format!("The share server refused the rename ({status}): {detail}")
+    }))
+}
+
 /// Delete the share of `clip_id` on the server it was uploaded to.
 ///
 /// The local record is dropped when the server confirms the deletion (2xx) or

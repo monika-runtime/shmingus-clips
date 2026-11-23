@@ -192,6 +192,19 @@ pub async fn rename_clip(
     title: String,
 ) -> Result<Clip> {
     let clip = state.library.rename(&id, &title).await?;
+    // A shared clip keeps its public page in step with the local title. The
+    // local rename stands even when the server cannot be reached.
+    if sharing::get_share(&id).is_some() {
+        let settings = state.settings.get();
+        if let Err(err) = sharing::update_share_title(&id, &clip.title, &settings).await {
+            log::warn!("could not update the shared page title: {err}");
+            events::toast(
+                &app,
+                "error",
+                format!("Renamed here, but the shared page was not updated: {err}"),
+            );
+        }
+    }
     events::library_changed(&app);
     Ok(clip)
 }
