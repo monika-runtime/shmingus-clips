@@ -9,6 +9,7 @@ import { APP_VERSION } from "../lib/defaults";
 import { useApp, type Route } from "../state/store";
 import { Toasts } from "./ui/Toasts";
 import { SetupBanner } from "./SetupBanner";
+import { UpdateBanner } from "./UpdateBanner";
 
 const NAV: Array<{ route: Route; label: string; icon: LucideIcon }> = [
   { route: "library", label: "Library", icon: Library },
@@ -82,7 +83,10 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <main className="main" id="main" ref={mainRef} tabIndex={-1}>
-        <SetupBanner />
+        <div className="banners">
+          <UpdateBanner />
+          <SetupBanner />
+        </div>
         <div className="main__content">{children}</div>
       </main>
 

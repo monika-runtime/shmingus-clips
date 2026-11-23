@@ -19,7 +19,7 @@ import {
 import { backend, isDesktop } from "../lib/bridge";
 import { DEFAULT_RECORDER_STATUS, DEFAULT_SETTINGS } from "../lib/defaults";
 import { errorMessage } from "../lib/errors";
-import { checkForUpdate } from "../lib/updates";
+import { checkForUpdate, type UpdateInfo } from "../lib/updates";
 import {
   previewSettingsParam,
   previewShareInfo,
@@ -132,6 +132,10 @@ interface Store {
   requestRename: (clip: Clip) => void;
   cancelRename: () => void;
 
+  /** A newer release found at launch, until the person dismisses it. */
+  update: UpdateInfo | null;
+  dismissUpdate: () => void;
+
   toasts: ToastItem[];
   pushToast: (
     level: Toast["level"],
@@ -150,6 +154,7 @@ function readRoute(): Route {
 }
 
 const SETUP_KEY = "clipforge.setup-dismissed";
+const UPDATE_DISMISSED_KEY = "clipforge.update-dismissed";
 const ONBOARDING_KEY = "clipforge.onboarding-dismissed";
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -211,6 +216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [playerClip, setPlayerClip] = useState<Clip | null>(null);
   const [renameTarget, setRenameTarget] = useState<Clip | null>(null);
 
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastSeq = useRef(0);
   const settingsRef = useRef<Settings | null>(null);
@@ -266,19 +272,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setToasts((list) => list.filter((toast) => toast.id !== id));
   }, []);
 
-  // Look for a newer release once the window has settled. A toast points at the
-  // Updates panel; nothing installs without the person asking.
+  const dismissUpdate = useCallback(() => {
+    setUpdate((current) => {
+      if (current) {
+        try {
+          window.localStorage.setItem(UPDATE_DISMISSED_KEY, current.version);
+        } catch {
+          // Nothing to remember with; the banner still closes for this session.
+        }
+      }
+      return null;
+    });
+  }, []);
+
+  // Look for a newer release once the window has settled. Found versions show a
+  // banner that stays until dismissed; nothing installs on its own.
   useEffect(() => {
     if (!desktop) return;
     let active = true;
     const timer = window.setTimeout(() => {
       void checkForUpdate()
-        .then((update) => {
-          if (!active || !update) return;
-          pushToast("info", `Shmingus Clips ${update.version} is available.`, {
-            label: "Update",
-            run: () => openSettings("app"),
-          });
+        .then((info) => {
+          if (!active || !info) return;
+          let dismissed = "";
+          try {
+            dismissed = window.localStorage.getItem(UPDATE_DISMISSED_KEY) ?? "";
+          } catch {
+            // Storage unavailable: show the banner rather than hide the update.
+          }
+          if (dismissed !== info.version) setUpdate(info);
         })
         .catch(() => {
           // Offline, or the release feed refused: the Updates panel can retry.
@@ -288,7 +310,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [desktop, openSettings, pushToast]);
+  }, [desktop]);
 
   const dismissSetup = useCallback(() => {
     setSetupDismissed(true);
@@ -666,6 +688,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     renameTarget,
     requestRename,
     cancelRename,
+    update,
+    dismissUpdate,
     toasts,
     pushToast,
     dismissToast,

@@ -13,7 +13,13 @@ export interface UpdateInfo {
  * updater configured.
  */
 export async function checkForUpdate(): Promise<UpdateInfo | null> {
-  if (!isDesktop()) return null;
+  if (!isDesktop()) {
+    // Browser preview: `?update=0.5.0` paints the update banner for design work.
+    const sample = new URLSearchParams(window.location.search).get("update");
+    return sample
+      ? { version: sample, notes: null, date: null }
+      : null;
+  }
   const { check } = await import("@tauri-apps/plugin-updater");
   const update = await check();
   if (!update) return null;
