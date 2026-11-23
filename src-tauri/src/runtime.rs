@@ -106,8 +106,10 @@ const HOST_LIB_DIRS: [&str; 4] = [
     "/usr/lib/i386-linux-gnu",
 ];
 
-/// Set once the process already runs with the host libraries first, so the
-/// re-exec cannot loop.
+/// Holds the pid of the process that already moved the host libraries first,
+/// so the re-exec cannot loop. A pid rather than a flag: the relauched process
+/// after an in-app update inherits the environment, and it must run the repair
+/// again rather than skip it.
 const HOST_LIBS_MARKER: &str = "SHMINGUS_CLIPS_HOST_LIBS";
 
 /// Put the host's GStreamer and GLib ahead of the copies bundled in the
@@ -121,7 +123,8 @@ const HOST_LIBS_MARKER: &str = "SHMINGUS_CLIPS_HOST_LIBS";
 /// core, libraries and plugins on one version; the bundled copies stay behind
 /// it as a fallback for libraries the host does not have.
 fn prefer_host_libraries() {
-    if std::env::var_os(HOST_LIBS_MARKER).is_some() {
+    let pid = std::process::id().to_string();
+    if std::env::var(HOST_LIBS_MARKER).ok().as_deref() == Some(pid.as_str()) {
         return;
     }
 
@@ -158,7 +161,7 @@ fn prefer_host_libraries() {
     let err = Command::new(&exe)
         .args(std::env::args_os().skip(1))
         .env("LD_LIBRARY_PATH", dirs.join(":"))
-        .env(HOST_LIBS_MARKER, "1")
+        .env(HOST_LIBS_MARKER, &pid)
         .exec();
     log::warn!("could not re-exec with the host libraries ({err}); keeping the bundled ones");
 }
