@@ -138,6 +138,25 @@ fn render_choice(args: &[String], env: Option<&str>, stored: bool) -> bool {
     stored
 }
 
+/// Turn Compatibility rendering on in the saved settings. Used after the app
+/// detects repeated startup crashes, so the choice is visible in Settings.
+pub fn enable_software_rendering() -> Result<()> {
+    let path = config_dir().join("settings.json");
+    let mut settings = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Settings>(&raw).ok())
+        .unwrap_or_default();
+    if settings.software_rendering {
+        return Ok(());
+    }
+    settings.software_rendering = true;
+    let dir = config_dir();
+    std::fs::create_dir_all(&dir)?;
+    let json = serde_json::to_string_pretty(&settings)?;
+    std::fs::write(path, json)?;
+    Ok(())
+}
+
 pub fn config_dir() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))

@@ -1138,7 +1138,7 @@ export function SettingsScreen() {
               />
               <Switch
                 label="Compatibility rendering"
-                description="Draw the interface without GPU acceleration. Use this if the window crashes right after opening on NVIDIA Wayland. Takes effect on the next launch; if it then refuses to open, launch once with --no-software-rendering to turn it back off."
+                description="Draw the interface without GPU acceleration. Use this if the window crashes right after opening on NVIDIA Wayland; Shmingus Clips also turns it on by itself after a failed start. Takes effect on the next launch; if it then refuses to open, launch once with --no-software-rendering to turn it back off."
                 checked={draft.softwareRendering}
                 onChange={(next) => patch({ softwareRendering: next })}
               />

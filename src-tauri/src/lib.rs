@@ -35,6 +35,7 @@ use crate::state::AppState;
 pub fn prepare_runtime_environment() {
     init_logging();
     crate::settings::migrate_legacy_dirs();
+    runtime::startup_guard_begin();
     runtime::prepare();
 }
 
@@ -103,6 +104,21 @@ pub fn run() {
         .manage(state)
         .setup(move |app| {
             let handle = app.handle().clone();
+
+            // The window is up; the next few seconds decide that this launch
+            // was not a startup crash.
+            let guard = handle.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                runtime::startup_guard_commit();
+                if runtime::take_auto_compat_note() {
+                    events::toast(
+                        &guard,
+                        "info",
+                        "Compatibility rendering was turned on after repeated startup crashes. You can turn it off in Settings > App.",
+                    );
+                }
+            });
 
             tray::init(&handle)?;
 
@@ -235,8 +251,13 @@ pub fn run() {
             commands::auth_login,
             commands::auth_logout,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Shmingus Clips");
+        .build(tauri::generate_context!())
+        .expect("error while building Shmingus Clips")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                runtime::startup_guard_commit();
+            }
+        });
 }
 
 #[cfg(test)]

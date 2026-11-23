@@ -83,6 +83,114 @@ fn drop_bundled_python_env() {
 }
 
 // ---------------------------------------------------------------------------
+// Startup crash guard
+// ---------------------------------------------------------------------------
+
+/// Counts startup attempts and remembers the launch chain, so an in-app update
+/// relaunch or a portal re-exec is not mistaken for a fresh launch.
+const STARTUP_COUNT: &str = "startup-crashes";
+const STARTUP_TOKEN: &str = "startup-token";
+const STARTUP_TOKEN_ENV: &str = "SHMINGUS_CLIPS_STARTUP_TOKEN";
+const COMPAT_AUTO_NOTE: &str = "compatibility-auto-enabled";
+/// Failed startups before Compatibility rendering turns itself on. A clean
+/// start or exit clears the count, so only a real hard crash counts.
+const CRASHES_BEFORE_COMPAT: u32 = 1;
+
+/// Call before the webview starts. If the previous launches died during
+/// startup, switch to Compatibility rendering; otherwise record this attempt.
+/// A launch that reaches the running state calls [`startup_guard_commit`].
+pub fn startup_guard_begin() {
+    if std::env::var_os("APPIMAGE").is_none() || !is_own_appimage_for_guard() {
+        return;
+    }
+    if std::env::args()
+        .skip(1)
+        .any(|arg| arg == "--selftest" || arg == "--doctor" || arg == "--no-software-rendering")
+    {
+        return;
+    }
+    if crate::settings::software_rendering_requested() {
+        return;
+    }
+
+    let cache = crate::settings::cache_dir();
+    let token_path = cache.join(STARTUP_TOKEN);
+    if same_launch_chain(&token_path) {
+        return;
+    }
+
+    let token = uuid::Uuid::new_v4().to_string();
+    if std::fs::create_dir_all(&cache).is_ok() {
+        let _ = std::fs::write(&token_path, &token);
+    }
+    // SAFETY: called from main before any thread is spawned.
+    unsafe { std::env::set_var(STARTUP_TOKEN_ENV, &token) };
+
+    let count_path = cache.join(STARTUP_COUNT);
+    let previous: u32 = std::fs::read_to_string(&count_path)
+        .ok()
+        .and_then(|raw| raw.trim().parse().ok())
+        .unwrap_or(0);
+
+    if previous >= CRASHES_BEFORE_COMPAT {
+        match crate::settings::enable_software_rendering() {
+            Ok(()) => {
+                log::warn!(
+                    "startup crashed {previous} times; enabling Compatibility rendering"
+                );
+                let _ = std::fs::write(cache.join(COMPAT_AUTO_NOTE), "1");
+                let _ = std::fs::remove_file(&count_path);
+                let _ = std::fs::remove_file(&token_path);
+            }
+            Err(err) => log::warn!("could not save the Compatibility rendering choice: {err}"),
+        }
+        return;
+    }
+
+    let _ = std::fs::write(count_path, (previous + 1).to_string());
+}
+
+/// The window has been up long enough (or the app is exiting): this launch is
+/// not a startup crash.
+pub fn startup_guard_commit() {
+    let cache = crate::settings::cache_dir();
+    let _ = std::fs::remove_file(cache.join(STARTUP_COUNT));
+    let _ = std::fs::remove_file(cache.join(STARTUP_TOKEN));
+    // SAFETY: only removes a variable this process may have set.
+    unsafe { std::env::remove_var(STARTUP_TOKEN_ENV) };
+}
+
+/// Whether Compatibility rendering was switched on automatically, so the
+/// interface can say so once.
+pub fn take_auto_compat_note() -> bool {
+    let path = crate::settings::cache_dir().join(COMPAT_AUTO_NOTE);
+    if path.is_file() {
+        let _ = std::fs::remove_file(path);
+        true
+    } else {
+        false
+    }
+}
+
+fn same_launch_chain(token_path: &Path) -> bool {
+    let Ok(token) = std::env::var(STARTUP_TOKEN_ENV) else {
+        return false;
+    };
+    std::fs::read_to_string(token_path)
+        .map(|stored| stored.trim() == token)
+        .unwrap_or(false)
+}
+
+/// True when this binary runs from our own AppImage. Mirrors the check in
+/// `prepare` without needing the path again.
+fn is_own_appimage_for_guard() -> bool {
+    std::env::var_os("APPIMAGE")
+        .map(PathBuf::from)
+        .map(|path| is_own_appimage(&path))
+        .unwrap_or(false)
+}
+
+// ---------------------------------------------------------------------------
 // Host vs bundled libraries
 // ---------------------------------------------------------------------------
 
