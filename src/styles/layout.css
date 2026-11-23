@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   height: 100vh;
   padding: 16px 0;
   border-right: 1px solid var(--border);
@@ -89,7 +89,6 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  margin-top: 8px;
 }
 
 .rail__item {
