@@ -1,6 +1,6 @@
 import type { RecorderStatus, Settings } from "./types";
 
-export const APP_VERSION = "0.5.1";
+export const APP_VERSION = "0.6.0";
 
 export const DEFAULT_HOTKEYS = {
   saveClip: "ALT+c",

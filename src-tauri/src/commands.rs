@@ -234,6 +234,18 @@ pub async fn trim_clip(
     Ok(clip)
 }
 
+/// Render an edit timeline into a new clip in the library.
+#[tauri::command]
+pub async fn render_edit(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    plan: crate::editor::EditPlan,
+) -> Result<Clip> {
+    let clip = state.library.render_edit(plan).await?;
+    events::library_changed(&app);
+    Ok(clip)
+}
+
 #[tauri::command]
 pub async fn export_clip(
     _app: AppHandle,

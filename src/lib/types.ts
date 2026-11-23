@@ -18,6 +18,40 @@ export interface AudioSettings {
   micAutoGain: boolean;
 }
 
+export type EditorAspect = "source" | "vertical" | "square";
+
+export interface EditorSegment {
+  clipId: string;
+  startMs: number;
+  endMs: number;
+  speed: number;
+  desktopGain: number;
+  micGain: number;
+  muteDesktop: boolean;
+  muteMic: boolean;
+  fadeInMs: number;
+  fadeOutMs: number;
+  rotation: 0 | 90 | 180 | 270;
+}
+
+export interface EditorOverlay {
+  text: string;
+  startMs: number;
+  endMs: number;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  boxed: boolean;
+}
+
+export interface EditPlan {
+  title: string;
+  aspect: EditorAspect;
+  segments: EditorSegment[];
+  overlays: EditorOverlay[];
+}
+
 export interface SavedMonitor {
   id: number;
   name: string;

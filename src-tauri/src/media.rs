@@ -47,7 +47,7 @@ pub fn run(program: &str, args: &[&std::ffi::OsStr]) -> Result<String> {
         let tail: String = stderr
             .lines()
             .rev()
-            .take(8)
+            .take(20)
             .collect::<Vec<_>>()
             .into_iter()
             .rev()

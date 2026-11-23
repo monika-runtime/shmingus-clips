@@ -18,6 +18,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use parking_lot::{Mutex, RwLock};
 
+use crate::editor;
 use crate::error::{AppError, Result};
 use crate::media;
 use crate::model::Clip;
@@ -326,6 +327,117 @@ impl Library {
             id: new_id,
             title: format!("{} (trim)", source_clip.title),
             game: source_clip.game.clone(),
+            path: out.to_string_lossy().to_string(),
+            thumbnail: thumbnail
+                .exists()
+                .then(|| thumbnail.to_string_lossy().to_string()),
+            created_at: now_rfc3339(),
+            duration_ms: probe.duration_ms,
+            size_bytes: media::file_size(&out),
+            width: probe.width,
+            height: probe.height,
+            favorite: false,
+        };
+        self.upsert(clip.clone()).await?;
+        Ok(clip)
+    }
+
+    /// Render an edit timeline into a new clip. The source clips are untouched.
+    pub async fn render_edit(&self, plan: editor::EditPlan) -> Result<Clip> {
+        self.ensure_loaded();
+        if plan.segments.is_empty() {
+            return Err(AppError::msg("the edit has no segments"));
+        }
+
+        let mut clips = Vec::with_capacity(plan.segments.len());
+        for segment in &plan.segments {
+            let clip = self
+                .get(&segment.clip_id)
+                .ok_or_else(|| AppError::msg("a clip in the edit is missing"))?;
+            clips.push(clip);
+        }
+        let first = clips[0].clone();
+
+        let typed = plan.title.trim();
+        let title = if typed.is_empty() {
+            format!("{} (edit)", first.title)
+        } else {
+            sanitise_title(typed)
+        };
+        let folder = PathBuf::from(&first.path)
+            .parent()
+            .map(PathBuf::from)
+            .ok_or_else(|| AppError::msg("the clip path has no folder"))?;
+        let mut stem = title
+            .to_lowercase()
+            .chars()
+            .map(|c| if c.is_alphanumeric() { c } else { '-' })
+            .collect::<String>();
+        while stem.contains("--") {
+            stem = stem.replace("--", "-");
+        }
+        let stem = stem.trim_matches('-').chars().take(60).collect::<String>();
+        let stem = if stem.is_empty() {
+            "edit".to_string()
+        } else {
+            stem
+        };
+
+        let out = reserve_path(&folder, &format!("{stem}-edit"), "mp4")?;
+        let new_id = uuid::Uuid::new_v4().to_string();
+        let thumbnail = self.paths.thumbnails.join(format!("{new_id}.jpg"));
+        let game = first.game.clone();
+
+        let job_plan = plan.clone();
+        let job_out = out.clone();
+        let job_thumb = thumbnail.clone();
+        let job = tokio::task::spawn_blocking(move || -> Result<media::MediaProbe> {
+            let mut sources = Vec::with_capacity(clips.len());
+            for clip in &clips {
+                let path = PathBuf::from(&clip.path);
+                if !path.is_file() {
+                    return Err(AppError::msg(format!(
+                        "the file for \"{}\" is missing",
+                        clip.title
+                    )));
+                }
+                let probe = media::probe(&path)?;
+                sources.push(editor::Source {
+                    path,
+                    duration_ms: probe.duration_ms,
+                    width: probe.width,
+                    height: probe.height,
+                    audio_streams: probe.audio_streams,
+                });
+            }
+            let probe = editor::render(&job_plan, &sources, &job_out)?;
+            if let Err(err) = media::thumbnail(
+                &job_out,
+                &job_thumb,
+                thumbnail_time(probe.duration_ms),
+                THUMB_WIDTH,
+            ) {
+                log::warn!("could not generate the edit thumbnail: {err}");
+            }
+            Ok(probe)
+        });
+
+        let probe = match job.await {
+            Ok(Ok(probe)) => probe,
+            Ok(Err(err)) => {
+                let _ = std::fs::remove_file(&out);
+                return Err(err);
+            }
+            Err(err) => {
+                let _ = std::fs::remove_file(&out);
+                return Err(AppError::msg(format!("edit render failed: {err}")));
+            }
+        };
+
+        let clip = Clip {
+            id: new_id,
+            title,
+            game,
             path: out.to_string_lossy().to_string(),
             thumbnail: thumbnail
                 .exists()
@@ -1132,6 +1244,75 @@ mod tests {
         let remaining = lib.list(&save.to_string_lossy()).await.unwrap();
         assert!(remaining.iter().all(|clip| clip.id != original.id));
         assert!(remaining.iter().any(|clip| clip.id == trimmed.id));
+    }
+
+    #[tokio::test]
+    async fn renders_a_two_segment_edit_with_text() {
+        if !ffmpeg_ready() {
+            eprintln!("skipping: ffmpeg/ffprobe unavailable");
+            return;
+        }
+
+        let tmp = TempDir::new("edit-render");
+        let save = tmp.path().join("clips");
+        make_fixture(&save, "clip-one.mp4", 4);
+        let lib = test_library(tmp.path());
+        let source = lib.list(&save.to_string_lossy()).await.unwrap().remove(0);
+
+        let plan = crate::editor::EditPlan {
+            title: "Test edit".into(),
+            aspect: crate::editor::Aspect::Source,
+            segments: vec![
+                crate::editor::Segment {
+                    clip_id: source.id.clone(),
+                    start_ms: 0,
+                    end_ms: 1500,
+                    speed: 1.0,
+                    desktop_gain: 1.0,
+                    mic_gain: 1.0,
+                    mute_desktop: false,
+                    mute_mic: false,
+                    fade_in_ms: 200,
+                    fade_out_ms: 0,
+                    rotation: 0,
+                },
+                crate::editor::Segment {
+                    clip_id: source.id.clone(),
+                    start_ms: 2000,
+                    end_ms: 3500,
+                    speed: 2.0,
+                    desktop_gain: 0.8,
+                    mic_gain: 1.2,
+                    mute_desktop: false,
+                    mute_mic: false,
+                    fade_in_ms: 0,
+                    fade_out_ms: 200,
+                    rotation: 0,
+                },
+            ],
+            overlays: vec![crate::editor::TextOverlay {
+                text: "Hello: 50%".into(),
+                start_ms: 100,
+                end_ms: 1200,
+                x: 0.5,
+                y: 0.8,
+                size: 32,
+                color: "#ffffff".into(),
+                boxed: true,
+            }],
+        };
+
+        let clip = lib.render_edit(plan).await.expect("render the edit");
+        assert_eq!(clip.title, "Test edit");
+        assert!(Path::new(&clip.path).is_file());
+        let probe = media::probe(Path::new(&clip.path)).unwrap();
+        // 1.5 s at 1x plus 1.5 s of source at 2x = 2.25 s.
+        assert!(
+            probe.duration_ms.abs_diff(2250) < 250,
+            "unexpected duration {}",
+            probe.duration_ms
+        );
+        assert_eq!(probe.audio_streams, 3, "mix, desktop and microphone survive");
     }
 
     #[tokio::test]

@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import type {
   AudioDevice,
+  EditPlan,
   MicLevel,
   AuthStatus,
   Clip,
@@ -47,6 +48,7 @@ export const api = {
     invoke<Clip>("rename_clip", { id, title }),
   setClipFavorite: (id: string, favorite: boolean) =>
     invoke<Clip>("set_clip_favorite", { id, favorite }),
+  renderEdit: (plan: EditPlan) => invoke<Clip>("render_edit", { plan }),
   trimClip: (id: string, startMs: number, endMs: number) =>
     invoke<Clip>("trim_clip", { id, startMs, endMs }),
   exportClip: (id: string, destDir?: string) =>

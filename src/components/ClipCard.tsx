@@ -1,5 +1,6 @@
 import {
   Download,
+  Film,
   FolderOpen,
   Gamepad2,
   Link2,
@@ -29,7 +30,7 @@ interface ClipCardProps {
 }
 
 export function ClipCard({ clip, onOpen }: ClipCardProps) {
-  const { shares } = useApp();
+  const { shares, openEditor } = useApp();
   const { toggleFavorite, rename, remove, exportClip, reveal } = useClipActions();
   const { share, uploadingId } = useShareActions();
   const { openContextMenu } = useContextMenu();
@@ -56,6 +57,11 @@ export function ClipCard({ clip, onOpen }: ClipCardProps) {
         label: clip.favorite ? "Remove from favorites" : "Add to favorites",
         icon: Star,
         onSelect: () => void toggleFavorite(clip),
+      },
+      {
+        label: "Edit clip",
+        icon: Film,
+        onSelect: () => openEditor(clip),
       },
       {
         label: "Rename",

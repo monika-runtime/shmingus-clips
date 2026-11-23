@@ -1,6 +1,7 @@
 import type {
   AudioDevice,
   AuthStatus,
+  EditPlan,
   Clip,
   EnvironmentReport,
   GameInfo,
@@ -516,6 +517,18 @@ export const previewBackend = {
         { name: "Concat + remux MP4", ok: true, detail: "5.9 s, 2 audio streams" },
         { name: "Generate thumbnail", ok: true, detail: "640 px JPEG at 1.0 s" },
       ],
+    };
+  },
+
+  async renderEdit(plan: EditPlan): Promise<Clip> {
+    await wait(200);
+    const first = clips.find((clip) => clip.id === plan.segments[0]?.clipId);
+    const base = first ?? clips[0];
+    return {
+      ...clone(base),
+      id: `preview-edit-${Date.now()}`,
+      title: plan.title.trim() || `${base.title} (edit)`,
+      createdAt: new Date().toISOString(),
     };
   },
 

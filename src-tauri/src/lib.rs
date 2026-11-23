@@ -3,6 +3,7 @@ mod capture;
 mod commands;
 mod detect;
 pub mod diagnostics;
+pub(crate) mod editor;
 mod error;
 mod events;
 mod library;
@@ -238,6 +239,7 @@ pub fn run() {
             commands::rename_clip,
             commands::set_clip_favorite,
             commands::trim_clip,
+            commands::render_edit,
             commands::export_clip,
             commands::reveal_export,
             commands::open_clips_folder,

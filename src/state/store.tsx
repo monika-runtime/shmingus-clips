@@ -35,7 +35,7 @@ import type {
   ShareInfo,
   Toast,} from "../lib/types";
 
-export type Route = "dashboard" | "library" | "settings";
+export type Route = "dashboard" | "library" | "settings" | "editor";
 export type SettingsSection =
   | "capture"
   | "audio"
@@ -124,6 +124,10 @@ interface Store {
   playerClip: Clip | null;
   openPlayer: (clip: Clip) => void;
   closePlayer: () => void;
+
+  editorClip: Clip | null;
+  openEditor: (clip: Clip) => void;
+  closeEditor: () => void;
 
   onboardingDismissed: boolean;
   dismissOnboarding: () => void;
@@ -220,6 +224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const previewShareOpened = useRef(false);
 
   const [playerClip, setPlayerClip] = useState<Clip | null>(null);
+  const [editorClip, setEditorClip] = useState<Clip | null>(null);
   const [renameTarget, setRenameTarget] = useState<Clip | null>(null);
 
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
@@ -417,6 +422,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openPlayer = useCallback((clip: Clip) => setPlayerClip(clip), []);
   const closePlayer = useCallback(() => setPlayerClip(null), []);
+
+  const openEditor = useCallback(
+    (clip: Clip) => {
+      setPlayerClip(null);
+      setEditorClip(clip);
+      navigate("editor");
+    },
+    [navigate],
+  );
+  const closeEditor = useCallback(() => {
+    setEditorClip(null);
+    navigate("library");
+  }, [navigate]);
 
   const applySettings = useCallback(async (next: Settings) => {
     const previous = settingsRef.current;
@@ -694,6 +712,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     playerClip,
     openPlayer,
     closePlayer,
+    editorClip,
+    openEditor,
+    closeEditor,
     renameTarget,
     requestRename,
     cancelRename,

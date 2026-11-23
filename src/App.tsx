@@ -2,6 +2,7 @@ import { RenameDialogHost } from "./components/RenameDialogHost";
 import { ShareDialogHost } from "./components/ShareDialogHost";
 import { Shell } from "./components/Shell";
 import { DashboardScreen } from "./screens/DashboardScreen";
+import { EditorScreen } from "./screens/EditorScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { PlayerModal } from "./screens/PlayerModal";
 import { SettingsScreen } from "./screens/SettingsScreen";
@@ -15,6 +16,8 @@ function Screens() {
       return <LibraryScreen />;
     case "settings":
       return <SettingsScreen />;
+    case "editor":
+      return <EditorScreen />;
     default:
       return <DashboardScreen />;
   }

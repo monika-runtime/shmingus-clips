@@ -3,7 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 import { api, assetUrl, onMicLevel } from "./api";
 import { previewBackend } from "./preview";
-import type { MicLevel } from "./types";
+import type { EditPlan, MicLevel } from "./types";
 
 /**
  * The frontend talks to the backend through this bridge. Inside Tauri every
@@ -38,6 +38,11 @@ export const backend = {
   runSelftest: () => call(api.runSelftest, previewBackend.runSelftest),
   getAudioDevices: () =>
     call(api.getAudioDevices, previewBackend.getAudioDevices),
+  renderEdit: (plan: EditPlan) =>
+    call(
+      () => api.renderEdit(plan),
+      () => previewBackend.renderEdit(plan),
+    ),
   micLevel: () => call(api.micLevel, previewBackend.micLevel),
   startMicMonitor: () => call(api.startMicMonitor, previewBackend.startMicMonitor),
   stopMicMonitor: () => call(api.stopMicMonitor, previewBackend.stopMicMonitor),

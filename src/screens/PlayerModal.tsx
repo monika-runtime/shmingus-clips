@@ -1,5 +1,6 @@
 import {
   Download,
+  Film,
   FolderOpen,
   Pause,
   Pencil,
@@ -36,7 +37,7 @@ export function PlayerModal() {
 }
 
 function PlayerDialog({ clip }: { clip: Clip }) {
-  const { closePlayer, addClip, openPlayer, pushToast, mediaBase, shares } =
+  const { closePlayer, addClip, openPlayer, openEditor, pushToast, mediaBase, shares } =
     useApp();
   const { toggleFavorite, rename, remove, exportClip, showExportFolder, reveal } =
     useClipActions();
@@ -148,6 +149,11 @@ function PlayerDialog({ clip }: { clip: Clip }) {
         label: "Rename",
         icon: Pencil,
         onSelect: () => setRenameOpen(true),
+      },
+      {
+        label: "Edit clip",
+        icon: Film,
+        onSelect: () => openEditor(clip),
       },
       {
         label: "Export",
@@ -372,6 +378,13 @@ function PlayerDialog({ clip }: { clip: Clip }) {
           </dl>
 
           <div className="player__actions">
+            <Button
+              variant="secondary"
+              icon={<Film size={16} />}
+              onClick={() => openEditor(clip)}
+            >
+              Edit clip
+            </Button>
             <Button
               variant={mode === "trim" ? "primary" : "secondary"}
               icon={<Scissors size={16} />}
