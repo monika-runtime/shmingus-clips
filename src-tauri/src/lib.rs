@@ -33,7 +33,15 @@ use crate::state::AppState;
 /// Repair environment differences introduced by the AppImage launcher. Call
 /// before anything touches GStreamer (including `--doctor` and `--selftest`).
 pub fn prepare_runtime_environment() {
+    init_logging();
     runtime::prepare();
+}
+
+/// Install the logger before any runtime repair, so `--doctor`, `--selftest`
+/// and the AppImage messages reach the console.
+fn init_logging() {
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .try_init();
 }
 
 /// Whether startup should ask for screen-capture permission: only when no
@@ -51,7 +59,7 @@ fn should_request_permission(settings: &Settings, state: RecorderState) -> bool 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     runtime::prepare();
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    init_logging();
 
     let settings = SettingsStore::load();
     let recorder = Arc::new(Recorder::new(settings.clone()));

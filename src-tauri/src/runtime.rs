@@ -30,10 +30,67 @@ pub fn prepare() {
         return;
     }
 
+    fix_webkit_renderer();
+    drop_bundled_python_env();
     prefer_host_libraries();
     fix_gstreamer();
     ensure_desktop_entry(&appimage);
     maybe_reexec_in_app_scope(&appimage);
+}
+
+// ---------------------------------------------------------------------------
+// WebKit on NVIDIA Wayland
+// ---------------------------------------------------------------------------
+
+/// WebKitGTK's DMA-BUF renderer does not survive the proprietary NVIDIA
+/// driver on Wayland: the compositor drops the connection and the app dies with
+/// `Gdk-Message: Error 71 (Protocol error) dispatching to Wayland display`
+/// moments after the window appears. Fall back to WebKit's other renderer path.
+fn fix_webkit_renderer() {
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_some() {
+        return;
+    }
+    if std::env::var_os("WAYLAND_DISPLAY").is_none() || !has_nvidia_gpu() {
+        return;
+    }
+    // SAFETY: called once from main before any thread is spawned.
+    unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
+    log::info!("AppImage runtime: NVIDIA on Wayland, disabling WebKit's DMA-BUF renderer");
+}
+
+fn has_nvidia_gpu() -> bool {
+    let Ok(entries) = std::fs::read_dir("/sys/class/drm") else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        let name = entry.file_name();
+        if !name.to_string_lossy().starts_with("card") {
+            return false;
+        }
+        std::fs::read_to_string(entry.path().join("device/vendor"))
+            .map(|vendor| vendor.trim().eq_ignore_ascii_case("0x10de"))
+            .unwrap_or(false)
+    })
+}
+
+/// The bundle ships no Python, but a host GStreamer plugin can start the
+/// system `python3` with the AppImage's `PYTHONHOME`, which then aborts with
+/// "No module named 'encodings'". Drop those variables when they point into the
+/// bundle so the host Python uses its own paths.
+fn drop_bundled_python_env() {
+    let appdir = std::env::var("APPDIR").unwrap_or_default();
+    for var in ["PYTHONHOME", "PYTHONPATH"] {
+        let Some(value) = std::env::var_os(var) else {
+            continue;
+        };
+        let text = value.to_string_lossy();
+        let inside_bundle = text.contains(".mount_")
+            || (!appdir.is_empty() && text.starts_with(appdir.as_str()));
+        if inside_bundle {
+            // SAFETY: called once from main before any thread is spawned.
+            unsafe { std::env::remove_var(var) };
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
