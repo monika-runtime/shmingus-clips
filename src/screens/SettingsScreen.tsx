@@ -107,13 +107,11 @@ const FIX_HINTS: Record<string, string> = {
 };
 
 function Panel({
-  label,
   title,
   description,
   actions,
   children,
 }: {
-  label: string;
   title: string;
   description?: string;
   actions?: ReactNode;
@@ -123,7 +121,6 @@ function Panel({
     <section className="card settings-panel">
       <header className="settings-panel__head">
         <div className="settings-panel__heading">
-          <p className="micro-label">{label}</p>
           <h2 className="settings-panel__title">{title}</h2>
           {description && (
             <p className="settings-panel__desc">{description}</p>
@@ -552,7 +549,6 @@ export function SettingsScreen() {
           {settingsSection === "capture" && (
             <>
               <Panel
-                label="Capture"
                 title="What gets recorded"
                 description="The screen Shmingus Clips watches, and how much it keeps ready."
               >
@@ -649,7 +645,6 @@ export function SettingsScreen() {
               </Panel>
 
               <Panel
-                label="Detection"
                 title="Game awareness"
                 description="Name clips after the game that was running."
               >
@@ -666,7 +661,6 @@ export function SettingsScreen() {
 
           {settingsSection === "audio" && (
             <Panel
-              label="Audio"
               title="Track mix"
               description="Desktop sound and microphone are captured as separate tracks."
             >
@@ -801,7 +795,6 @@ export function SettingsScreen() {
 
           {settingsSection === "hotkeys" && (
             <Panel
-              label="Hotkeys"
               title="Global shortcuts"
               description="Work while a game has focus, through the GlobalShortcuts portal."
               actions={
@@ -841,7 +834,6 @@ export function SettingsScreen() {
 
           {settingsSection === "storage" && (
             <Panel
-              label="Storage"
               title="Where clips live"
               description="Recordings are plain MP4 files in your own folder."
             >
@@ -895,7 +887,6 @@ export function SettingsScreen() {
           {settingsSection === "sharing" && (
             <>
               <Panel
-                label="Sharing"
                 title="Account"
                 description="Uploads use your Shmingus account. Sign in once on this computer; your password is only ever entered in the browser."
               >
@@ -986,7 +977,6 @@ export function SettingsScreen() {
               </Panel>
 
               <Panel
-                label="Sharing"
                 title="Share server"
                 description="Send a clip to your own share server and get a link you can paste into chat."
                 actions={
@@ -1039,7 +1029,6 @@ export function SettingsScreen() {
               </Panel>
 
               <Panel
-                label="Sharing"
                 title="How sharing works"
                 description="A few things to know before a clip leaves this computer."
               >
@@ -1069,7 +1058,6 @@ export function SettingsScreen() {
           {settingsSection === "app" && (
             <>
               <Panel
-                label="Appearance"
                 title="Theme"
                 description="Choose the color theme. Applies immediately and is remembered on this device."
               >
@@ -1103,7 +1091,6 @@ export function SettingsScreen() {
                 </div>
               </Panel>
               <Panel
-                label="Application"
                 title="Behaviour"
                 description="How Shmingus Clips starts and stays out of the way."
               >
@@ -1151,13 +1138,7 @@ export function SettingsScreen() {
               />
               </Panel>
               <Panel
-                label="Application"
                 title="Updates"
-                description={
-                  desktop
-                    ? "Shmingus Clips checks GitHub for a newer release at launch and can install it in place. Releases are signed, so only builds from this project install."
-                    : "Updates are available in the desktop app."
-                }
                 actions={
                   <Button
                     size="sm"
@@ -1207,7 +1188,6 @@ export function SettingsScreen() {
           {settingsSection === "diagnostics" && (
             <>
               <Panel
-                label="Diagnostics"
                 title="Can this computer record?"
                 description="Checks the pieces Shmingus Clips needs to record your screen, and says what to fix when one is missing."
                 actions={
@@ -1328,7 +1308,6 @@ export function SettingsScreen() {
               </Panel>
 
               <Panel
-                label="Diagnostics"
                 title="Self-test"
                 description="Records and saves a short test clip without touching your screen, to prove the pieces work together."
                 actions={
