@@ -224,3 +224,11 @@ cargo test --manifest-path src-tauri/Cargo.toml
 `--selftest` runs the real encoder/segment/remux path with a test pattern and
 two tone tracks - no portal consent needed - and asserts a 5–7s MP4 with two
 audio streams and a thumbnail.
+
+## Licence
+
+Shmingus Clips is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, version 2. It is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See [`LICENSE`](LICENSE) for the full text.
