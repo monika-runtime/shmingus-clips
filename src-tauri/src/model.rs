@@ -62,7 +62,7 @@ impl Default for AudioSettings {
             mic_enabled: true,
             mic_device: None,
             mic_volume: 1.0,
-            mic_auto_gain: true,
+            mic_auto_gain: false,
         }
     }
 }

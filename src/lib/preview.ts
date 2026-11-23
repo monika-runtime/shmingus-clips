@@ -108,7 +108,7 @@ let settings: Settings = {
     micEnabled: true,
     micDevice: "alsa_input.pci-0000_00_1f.3.analog-stereo",
     micVolume: 1,
-    micAutoGain: true,
+    micAutoGain: false,
   },
   hotkeys: { ...DEFAULT_HOTKEYS },
   captureMonitor: {

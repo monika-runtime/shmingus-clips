@@ -21,7 +21,7 @@ export const DEFAULT_SETTINGS: Settings = {
     micEnabled: true,
     micDevice: null,
     micVolume: 1,
-    micAutoGain: true,
+    micAutoGain: false,
   },
   hotkeys: DEFAULT_HOTKEYS,
   captureMonitor: null,
