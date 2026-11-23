@@ -1,0 +1,1330 @@
+<title>Shmingus Clips Theme Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<style>
+  /* Layout: editor rail of token controls beside a live Shmingus Clips window. */
+  :root {
+    color-scheme: light;
+    --page-bg: #f2f4f7;
+    --page-surface: #ffffff;
+    --page-surface-2: #e9edf1;
+    --page-border: #d8dee5;
+    --page-fg: #121820;
+    --page-muted: #55616c;
+    --page-faint: #7a8793;
+    --page-accent: #3f6fff;
+    --page-accent-ink: #ffffff;
+    --page-accent-soft: rgba(63, 111, 255, 0.12);
+    --page-danger: #b83232;
+    --page-ok: #237a3b;
+    --page-bad: #b83232;
+    --page-shadow: 0 18px 50px rgba(20, 30, 45, 0.12);
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page-bg: #0b0d10;
+      --page-surface: #14191f;
+      --page-surface-2: #1a2028;
+      --page-border: #262e37;
+      --page-fg: #ecf1f5;
+      --page-muted: #98a5b1;
+      --page-faint: #6c7884;
+      --page-accent: #c6ff4a;
+      --page-accent-ink: #111704;
+      --page-accent-soft: rgba(198, 255, 74, 0.12);
+      --page-danger: #ff7b7b;
+      --page-ok: #8ce99a;
+      --page-bad: #ff7b7b;
+      --page-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page-bg: #0b0d10;
+    --page-surface: #14191f;
+    --page-surface-2: #1a2028;
+    --page-border: #262e37;
+    --page-fg: #ecf1f5;
+    --page-muted: #98a5b1;
+    --page-faint: #6c7884;
+    --page-accent: #c6ff4a;
+    --page-accent-ink: #111704;
+    --page-accent-soft: rgba(198, 255, 74, 0.12);
+    --page-danger: #ff7b7b;
+    --page-ok: #8ce99a;
+    --page-bad: #ff7b7b;
+    --page-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --page-bg: #f2f4f7;
+    --page-surface: #ffffff;
+    --page-surface-2: #e9edf1;
+    --page-border: #d8dee5;
+    --page-fg: #121820;
+    --page-muted: #55616c;
+    --page-faint: #7a8793;
+    --page-accent: #3f6fff;
+    --page-accent-ink: #ffffff;
+    --page-accent-soft: rgba(63, 111, 255, 0.12);
+    --page-danger: #b83232;
+    --page-ok: #237a3b;
+    --page-bad: #b83232;
+    --page-shadow: 0 18px 50px rgba(20, 30, 45, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 48px;
+  }
+  button, input { font: inherit; }
+  button { cursor: pointer; }
+  :focus-visible {
+    outline: 2px solid var(--page-accent);
+    outline-offset: 2px;
+  }
+  .page {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding-top: 28px;
+  }
+  .page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 20px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand__mark {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: var(--page-accent);
+    color: var(--page-accent-ink);
+    box-shadow: 0 8px 24px var(--page-accent-soft);
+    flex: 0 0 auto;
+  }
+  .brand__mark svg { width: 22px; height: 22px; }
+  .eyebrow {
+    margin: 0 0 2px;
+    color: var(--page-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  h1 { margin: 0; font-size: clamp(24px, 3.2vw, 34px); line-height: 1.1; letter-spacing: -0.02em; }
+  .page-sub { margin: 6px 0 0; color: var(--page-muted); max-width: 56ch; }
+  .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--page-border);
+    border-radius: 10px;
+    background: var(--page-surface);
+    color: var(--page-fg);
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 150ms ease, border-color 150ms ease;
+  }
+  .btn:hover { background: var(--page-surface-2); border-color: var(--page-faint); }
+  .btn--primary {
+    border-color: transparent;
+    background: var(--page-accent);
+    color: var(--page-accent-ink);
+  }
+  .btn--primary:hover { background: var(--page-accent); filter: brightness(1.04); }
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+  }
+  .panel {
+    border: 1px solid var(--page-border);
+    border-radius: 18px;
+    background: var(--page-surface);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  }
+  .panel--controls { padding: 16px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 7px; margin: 4px 0 16px; }
+  .preset {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 30px;
+    padding: 0 9px 0 7px;
+    border: 1px solid var(--page-border);
+    border-radius: 999px;
+    background: var(--page-surface-2);
+    color: var(--page-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .preset:hover { color: var(--page-fg); border-color: var(--page-faint); }
+  .preset.is-on { color: var(--page-fg); border-color: var(--page-accent); box-shadow: 0 0 0 2px var(--page-accent-soft); }
+  .preset__dots { display: inline-flex; gap: 2px; }
+  .preset__dots i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+  .group { margin-top: 14px; }
+  .group:first-of-type { margin-top: 0; }
+  .group__title {
+    margin: 0 0 7px;
+    color: var(--page-faint);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .ctrl {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 7px;
+    border-radius: 9px;
+  }
+  .ctrl:hover { background: var(--page-surface-2); }
+  .ctrl__name { font-size: 12.5px; color: var(--page-muted); }
+  .ctrl__field { display: flex; align-items: center; gap: 6px; }
+  .ctrl input[type="color"] {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--page-border);
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .ctrl input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+  .ctrl input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 5px; }
+  .hex {
+    width: 82px;
+    height: 30px;
+    padding: 0 7px;
+    border: 1px solid var(--page-border);
+    border-radius: 8px;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+  .hex:focus { border-color: var(--page-accent); outline: none; }
+  .preview { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+  .frame { overflow: hidden; }
+  .frame__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--page-border);
+    background: var(--page-surface);
+  }
+  .dots { display: inline-flex; gap: 5px; margin-right: 2px; }
+  .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--page-border); display: block; }
+  .frame__title { color: var(--page-muted); font-size: 11.5px; font-weight: 600; margin-right: auto; }
+  .seg {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--page-border);
+    border-radius: 9px;
+    background: var(--page-surface-2);
+  }
+  .seg button {
+    height: 24px;
+    padding: 0 9px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--page-muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .seg button:hover { color: var(--page-fg); }
+  .seg button.is-on { background: var(--page-surface); color: var(--page-fg); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+  .frame__body { padding: 10px; background: var(--page-surface-2); }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 9px;
+    border: 1px solid var(--page-border);
+    border-radius: 999px;
+    background: var(--page-surface);
+    color: var(--page-muted);
+    font-size: 11px;
+  }
+  .check b { font-family: var(--mono); font-size: 11px; color: var(--page-fg); }
+  .check__tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; }
+  .check.is-ok .check__tag { color: var(--page-ok); }
+  .check.is-bad .check__tag { color: var(--page-bad); }
+  .cssbox { overflow: hidden; }
+  .cssbox summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 600;
+    list-style: none;
+  }
+  .cssbox summary::-webkit-details-marker { display: none; }
+  .cssbox summary::after { content: "▾"; color: var(--page-faint); }
+  .cssbox[open] summary::after { content: "▴"; }
+  .cssbox pre {
+    margin: 0;
+    max-height: 260px;
+    overflow: auto;
+    padding: 14px;
+    border-top: 1px solid var(--page-border);
+    background: var(--page-bg);
+    color: var(--page-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.65;
+    white-space: pre;
+  }
+  .footnote { color: var(--page-faint); font-size: 11.5px; margin: 4px 2px 0; }
+
+  /* ------------------------------------------------------------------ */
+  /* The live Shmingus Clips window - every color below comes from the tokens */
+  /* edited above.                                                       */
+  /* ------------------------------------------------------------------ */
+  .app {
+    --bg: #0b0d10;
+    --bg-soft: #0e1116;
+    --surface: #151a20;
+    --surface-2: #1a2028;
+    --surface-3: #222a33;
+    --surface-4: #2c3540;
+    --border: #232a32;
+    --border-strong: #313b46;
+    --text: #ecf1f5;
+    --text-muted: #98a5b1;
+    --text-faint: #69757f;
+    --accent: #c6ff4a;
+    --accent-strong: #b6f52e;
+    --accent-soft: rgba(198, 255, 74, 0.12);
+    --accent-ink: #111704;
+    --warn: #ff8a3d;
+    --warn-soft: rgba(255, 138, 61, 0.12);
+    --danger: #ff6b6b;
+    --danger-soft: rgba(255, 107, 107, 0.11);
+    --info: #7fb4ff;
+    --info-soft: rgba(127, 180, 255, 0.11);
+    --success: #8ce99a;
+    --success-soft: rgba(140, 233, 154, 0.11);
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    min-height: 540px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .app__rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 12px 0;
+    border-right: 1px solid var(--border);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, transparent), transparent 28%), var(--bg-soft);
+  }
+  .app__brand {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .app__brand svg { width: 18px; height: 18px; }
+  .app__nav { display: flex; flex-direction: column; gap: 5px; width: 100%; align-items: center; }
+  .app__nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 52px;
+    padding: 7px 0 6px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: none;
+    color: var(--text-faint);
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .app__nav button svg { width: 16px; height: 16px; }
+  .app__nav button:hover { color: var(--text); background: var(--surface); }
+  .app__nav button.is-on {
+    color: var(--accent);
+    border-color: var(--border);
+    background: var(--surface);
+  }
+  .app__version { margin-top: auto; color: var(--text-faint); font-family: var(--mono); font-size: 8.5px; }
+  .app__main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    padding: 20px 22px 22px;
+  }
+  .app__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .app__head h1 { font-size: 22px; letter-spacing: -0.02em; color: var(--text); }
+  .app__head .eyebrow { color: var(--text-faint); font-size: 8.5px; letter-spacing: 0.16em; }
+  .app__head .sub { margin: 5px 0 0; max-width: 52ch; color: var(--text-muted); font-size: 11.5px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: block; }
+  .app[data-state="recording"] .pill { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 34%, transparent); background: var(--accent-soft); }
+  .app[data-state="error"] .pill { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 34%, transparent); background: var(--danger-soft); }
+  .app[data-view="library"] .pill { visibility: hidden; }
+  .recorder {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 18px;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  .recorder__lead { min-width: 0; }
+  .primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .primary svg { width: 15px; height: 15px; }
+  .primary kbd {
+    margin-left: 2px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent-ink) 12%, transparent);
+    font-family: var(--mono);
+    font-size: 8.5px;
+    font-weight: 600;
+  }
+  .app[data-state="idle"] .primary,
+  .app[data-state="error"] .primary { background: var(--surface-3); color: var(--text); border: 1px solid var(--border-strong); }
+  .app[data-state="error"] .primary { color: var(--danger); }
+  .hint { margin: 7px 0 0; color: var(--text-faint); font-size: 10px; }
+  .errorline { margin: 7px 0 0; color: var(--danger); font-size: 10px; }
+  .recorder__track { min-width: 0; }
+  .held { color: var(--text-muted); font-size: 10.5px; margin-bottom: 6px; }
+  .held strong { color: var(--text); font-family: var(--mono); font-size: 20px; font-weight: 700; margin-right: 3px; }
+  .bar {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--surface-3);
+    overflow: hidden;
+  }
+  .bar > span {
+    position: relative;
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 62%, var(--surface-3)), var(--accent));
+    transition: width 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .app[data-state="recording"] .bar > span::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    right: -1px;
+    width: 4px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: lead-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes lead-pulse {
+    0%, 100% { opacity: 1; transform: scaleY(1); }
+    50% { opacity: 0.35; transform: scaleY(0.65); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app[data-state="recording"] .bar > span::after { animation: none; }
+    .bar > span { transition: none; }
+  }
+  .bar__ends { display: flex; justify-content: space-between; margin-top: 5px; color: var(--text-faint); font-family: var(--mono); font-size: 8.5px; }
+  .quiet {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px 9px;
+    padding-top: 11px;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: 10px;
+  }
+  .quiet .chip { color: var(--text-muted); }
+  .quiet .chip svg { width: 11px; height: 11px; margin-right: 3px; vertical-align: -1px; }
+  .quiet .dot { color: var(--border-strong); }
+  .view { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .app[data-view="dashboard"] .view--library,
+  .app[data-view="library"] .view--dashboard { display: none; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .section-head h2 { margin: 0; color: var(--text); font-size: 14px; }
+  .link { color: var(--text-muted); font-size: 10.5px; text-decoration: none; background: none; border: 0; padding: 0; }
+  .link:hover { color: var(--accent); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 11px; }
+  .card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .card.is-fav { border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
+  .card__media { position: relative; padding: 6px 6px 0; }
+  .thumb {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface-2);
+  }
+  .thumb::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 130% at 24% 8%, var(--thumb-a), transparent 62%),
+      linear-gradient(160deg, var(--surface-3), var(--bg));
+  }
+  .thumb::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.42));
+  }
+  .thumb--a { --thumb-a: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .thumb--b { --thumb-a: color-mix(in srgb, var(--warn) 55%, transparent); }
+  .thumb--c { --thumb-a: color-mix(in srgb, var(--info) 55%, transparent); }
+  .thumb--d { --thumb-a: color-mix(in srgb, var(--danger) 45%, transparent); }
+  .thumb__play {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--accent-ink);
+    opacity: 0;
+    transition: opacity 150ms ease;
+    z-index: 1;
+  }
+  .thumb__play span {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.4);
+  }
+  .thumb__play svg { width: 15px; height: 15px; }
+  .card:hover .thumb__play { opacity: 1; }
+  .dur {
+    position: absolute;
+    right: 11px;
+    bottom: 5px;
+    z-index: 2;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(7, 10, 13, 0.78);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 8.5px;
+  }
+  .star {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    background: rgba(9, 12, 15, 0.62);
+    color: var(--text-muted);
+  }
+  .star svg { width: 11px; height: 11px; }
+  .star.is-on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
+  .card__body { display: flex; flex-direction: column; gap: 4px; padding: 7px 8px 7px; min-width: 0; }
+  .card__title {
+    margin: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .card__meta {
+    display: flex;
+    align-items: center;
+    gap: 4px 7px;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-faint);
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  .card__meta span { flex: 0 0 auto; }
+  .card__meta span:first-child { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .card__meta svg { width: 10px; height: 10px; margin-right: 2px; vertical-align: -1px; }
+  .card__actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+    padding-top: 5px;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: 9px;
+  }
+  .card__actions .act { display: inline-flex; align-items: center; gap: 3px; background: none; border: 0; color: inherit; padding: 0; }
+  .card__actions .act svg { width: 10px; height: 10px; }
+  .card__actions .act:hover { color: var(--text); }
+  .card__actions .push { margin-left: auto; }
+  .lib-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .lib-head h1 { font-size: 22px; color: var(--text); }
+  .lib-head .sub { margin: 4px 0 0; color: var(--text-muted); font-size: 11px; }
+  .ghost {
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .ghost:hover { color: var(--text); border-color: var(--border-strong); }
+  .filters { display: flex; flex-wrap: wrap; gap: 5px; }
+  .filter {
+    height: 23px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 600;
+  }
+  .filter.is-on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+  .toast {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(300px, calc(100% - 32px));
+    padding: 9px 11px;
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--accent);
+    border-radius: 9px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 10.5px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  }
+  .app { position: relative; }
+
+  @media (max-width: 980px) {
+    .workspace { grid-template-columns: minmax(0, 1fr); }
+    .panel--controls { order: 2; }
+    .preview { order: 1; }
+  }
+  @media (max-width: 700px) {
+    .recorder { grid-template-columns: minmax(0, 1fr); }
+    .app { grid-template-columns: 54px minmax(0, 1fr); min-height: 0; }
+    .app__nav button { width: 44px; font-size: 6.5px; }
+    .app__main { padding: 14px; gap: 13px; }
+    .app__head h1 { font-size: 19px; }
+    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .frame__bar { padding: 8px 10px; }
+    .frame__title { display: none; }
+  }
+  @media (max-width: 460px) {
+    .brand__mark { width: 38px; height: 38px; }
+    .cards { grid-template-columns: minmax(0, 1fr); }
+    .ctrl__name { font-size: 12px; }
+    .seg button { padding: 0 7px; }
+  }
+</style>
+
+<div class="page">
+  <header class="page-head">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5L8 5.5Z"/></svg>
+      </span>
+      <div>
+        <p class="eyebrow">Shmingus Clips</p>
+        <h1>Theme Lab</h1>
+        <p class="page-sub">Change the colors, watch the app update, then copy the tokens back into Shmingus Clips.</p>
+      </div>
+    </div>
+    <div class="page-actions">
+      <button class="btn" id="reset" type="button">Reset</button>
+      <button class="btn btn--primary" id="copy" type="button">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg>
+        Copy CSS
+      </button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <section class="panel panel--controls" aria-label="Color controls">
+      <p class="eyebrow">Palette</p>
+      <div class="presets" id="presets"></div>
+      <div id="controls"></div>
+      <p class="footnote">Soft tints, glow and the third surface are derived from these colors automatically.</p>
+    </section>
+
+    <section class="preview" aria-label="Live preview">
+      <div class="panel frame">
+        <div class="frame__bar">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="frame__title">Shmingus Clips - live preview</span>
+          <div class="seg" id="view-seg" aria-label="Preview screen">
+            <button type="button" data-view="dashboard" class="is-on">Dashboard</button>
+            <button type="button" data-view="library">Library</button>
+          </div>
+          <div class="seg" id="state-seg" aria-label="Recorder state">
+            <button type="button" data-state="recording" class="is-on">Recording</button>
+            <button type="button" data-state="idle">Idle</button>
+            <button type="button" data-state="error">Error</button>
+          </div>
+        </div>
+        <div class="frame__body">
+          <div class="app" id="app" data-view="dashboard" data-state="recording">
+            <aside class="app__rail">
+              <div class="app__brand" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5L8 5.5Z"/></svg>
+              </div>
+              <nav class="app__nav" aria-label="Preview navigation">
+                <button type="button" class="is-on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>Dashboard</button>
+                <button type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h4v14H4V5Zm6 3h4v11h-4V8Zm6-5h4v16h-4V3Z"/></svg>Library</button>
+                <button type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9 5.5v-3l-2.1-.7a7 7 0 0 0-.6-1.4l1-2-2.1-2.1-2 1a7 7 0 0 0-1.4-.6L12 2.5H9l-.7 2.1a7 7 0 0 0-1.4.6l-2-1L2.8 6.3l1 2a7 7 0 0 0-.6 1.4L1 10.5v3l2.1.7c.2.5.4 1 .6 1.4l-1 2 2.1 2.1 2-1c.4.3.9.5 1.4.6l.7 2.1h3l.7-2.1c.5-.2 1-.4 1.4-.6l2 1 2.1-2.1-1-2c.3-.4.5-.9.6-1.4l2.1-.7Z"/></svg>Settings</button>
+              </nav>
+              <span class="app__version">v0.1.0</span>
+            </aside>
+
+            <main class="app__main">
+              <header class="app__head">
+                <div>
+                  <p class="eyebrow" id="view-eyebrow">Dashboard</p>
+                  <h1 id="view-title">Replay buffer</h1>
+                  <p class="sub" id="view-sub">Save the last few seconds of play whenever something worth keeping happens.</p>
+                </div>
+                <span class="pill" id="pill"><i></i><span id="pill-text">Recording</span></span>
+              </header>
+
+              <div class="view view--dashboard">
+                <section class="recorder">
+                  <div class="recorder__lead">
+                    <button class="primary" id="primary" type="button">
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5L8 5.5Z"/></svg>
+                      <span id="primary-label">Save clip</span>
+                      <kbd>Alt C</kbd>
+                    </button>
+                    <p class="hint" id="hint">Then press Alt + C when something happens.</p>
+                    <p class="errorline" id="errorline" hidden>Capture failed - check the screen permission.</p>
+                  </div>
+                  <div class="recorder__track">
+                    <p class="held"><strong id="held">24</strong>s held</p>
+                    <div class="bar"><span id="bar-fill" style="width: 78%"></span></div>
+                    <div class="bar__ends"><span>0s</span><span>30s ring</span></div>
+                  </div>
+                  <div class="quiet">
+                    <span class="chip"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 7h10a4 4 0 0 1 4 4v2a4 4 0 0 1-4 4h-1l-2 2h-4l-2-2H7a4 4 0 0 1-4-4v-2a4 4 0 0 1 4-4Zm1.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>ELDEN RING</span>
+                    <span class="dot">·</span><span>Mic on</span>
+                    <span class="dot">·</span><span>Desktop audio on</span>
+                    <span class="dot">·</span><span>Auto encoder</span>
+                    <span class="dot">·</span><span>1920×1080</span>
+                  </div>
+                </section>
+
+                <section>
+                  <div class="section-head">
+                    <h2>Recent clips</h2>
+                    <button class="link" type="button" data-goto="library">View all →</button>
+                  </div>
+                  <div class="cards" id="recent-cards"></div>
+                </section>
+              </div>
+
+              <div class="view view--library">
+                <div class="lib-head">
+                  <div>
+                    <p class="eyebrow">Library</p>
+                    <h1>Your clips</h1>
+                    <p class="sub">4 clips · 379 MB · 2 today</p>
+                  </div>
+                  <button class="ghost" type="button">Open folder</button>
+                </div>
+                <div class="filters">
+                  <button class="filter is-on" type="button">All 4</button>
+                  <button class="filter" type="button">Favorites 2</button>
+                  <button class="filter" type="button">ELDEN RING</button>
+                  <button class="filter" type="button">Counter-Strike 2</button>
+                </div>
+                <div class="cards" id="library-cards"></div>
+              </div>
+            </main>
+
+            <div class="toast" id="toast" hidden>
+              <span id="toast-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="checks" id="checks" aria-label="Contrast checks"></div>
+
+      <details class="panel cssbox">
+        <summary>CSS tokens</summary>
+        <pre id="css"></pre>
+      </details>
+      <p class="footnote">Copy these into <code>src/styles/tokens.css</code> (or paste them here and I’ll apply them).</p>
+    </section>
+  </div>
+</div>
+
+<script>
+  const DEFAULTS = {
+    bg: "#0b0d10",
+    bgSoft: "#0e1116",
+    surface: "#151a20",
+    surface2: "#1a2028",
+    border: "#232a32",
+    borderStrong: "#313b46",
+    text: "#ecf1f5",
+    textMuted: "#98a5b1",
+    textFaint: "#69757f",
+    accent: "#c6ff4a",
+    accentStrong: "#b6f52e",
+    accentInk: "#111704",
+    warn: "#ff8a3d",
+    danger: "#ff6b6b",
+    info: "#7fb4ff",
+    success: "#8ce99a"
+  };
+  const VAR = {
+    bg: "--bg",
+    bgSoft: "--bg-soft",
+    surface: "--surface",
+    surface2: "--surface-2",
+    border: "--border",
+    borderStrong: "--border-strong",
+    text: "--text",
+    textMuted: "--text-muted",
+    textFaint: "--text-faint",
+    accent: "--accent",
+    accentStrong: "--accent-strong",
+    accentInk: "--accent-ink",
+    warn: "--warn",
+    danger: "--danger",
+    info: "--info",
+    success: "--success"
+  };
+  const GROUPS = [
+    {
+      title: "Surfaces",
+      items: [
+        ["bg", "Background"],
+        ["bgSoft", "Background soft"],
+        ["surface", "Surface"],
+        ["surface2", "Surface 2"],
+        ["border", "Border"],
+        ["borderStrong", "Border strong"]
+      ]
+    },
+    {
+      title: "Ink",
+      items: [
+        ["text", "Text"],
+        ["textMuted", "Muted text"],
+        ["textFaint", "Faint text"]
+      ]
+    },
+    {
+      title: "Accent",
+      items: [
+        ["accent", "Accent"],
+        ["accentStrong", "Accent strong"],
+        ["accentInk", "Ink on accent"]
+      ]
+    },
+    {
+      title: "Semantic",
+      items: [
+        ["warn", "Warning"],
+        ["danger", "Danger"],
+        ["info", "Info"],
+        ["success", "Success"]
+      ]
+    }
+  ];
+  const PRESETS = [
+    {
+      id: "lime",
+      name: "Lime",
+      colors: { ...DEFAULTS }
+    },
+    {
+      id: "amber",
+      name: "Amber tape",
+      colors: {
+        bg: "#0c0a08", bgSoft: "#100d0a", surface: "#1a1510", surface2: "#221b14",
+        border: "#2e251b", borderStrong: "#3d3224", text: "#f4ece1", textMuted: "#b3a392",
+        textFaint: "#7d7060", accent: "#ffb84d", accentStrong: "#ffa726", accentInk: "#1c1205",
+        warn: "#ff7a45", danger: "#ff6b6b", info: "#7fb4ff", success: "#8ce99a"
+      }
+    },
+    {
+      id: "cyan",
+      name: "Cyan lab",
+      colors: {
+        bg: "#060b0e", bgSoft: "#091116", surface: "#0f181e", surface2: "#14212a",
+        border: "#1e2f3a", borderStrong: "#2a4050", text: "#e6f5fa", textMuted: "#9bb3bf",
+        textFaint: "#6b8492", accent: "#5ee7ff", accentStrong: "#3ad4ef", accentInk: "#04141a",
+        warn: "#ffb84d", danger: "#ff6b6b", info: "#7fb4ff", success: "#8ce99a"
+      }
+    },
+    {
+      id: "violet",
+      name: "Violet",
+      colors: {
+        bg: "#0b0910", bgSoft: "#0f0c16", surface: "#17121f", surface2: "#1e1829",
+        border: "#2b2338", borderStrong: "#3a304b", text: "#f1ebfa", textMuted: "#b0a3c2",
+        textFaint: "#7c708d", accent: "#c9a6ff", accentStrong: "#b58bff", accentInk: "#160b26",
+        warn: "#ff8a3d", danger: "#ff6b6b", info: "#7fb4ff", success: "#8ce99a"
+      }
+    },
+    {
+      id: "daylight",
+      name: "Daylight",
+      colors: {
+        bg: "#eef1f4", bgSoft: "#e7ebef", surface: "#ffffff", surface2: "#f3f5f7",
+        border: "#d7dde3", borderStrong: "#c2cad2", text: "#141a20", textMuted: "#55616c",
+        textFaint: "#7b8792", accent: "#3f6fff", accentStrong: "#2f5fe8", accentInk: "#ffffff",
+        warn: "#c25e00", danger: "#c93a3a", info: "#2f6fd0", success: "#2e7d32"
+      }
+    }
+  ];
+
+  const CLIPS = [
+    { title: "Cliffside duel", game: "ELDEN RING", dur: "0:43", size: "108 MB", age: "8 minutes ago", tone: "a", fav: true },
+    { title: "Chronos down", game: "Hades II", dur: "0:31", size: "71 MB", age: "54 minutes ago", tone: "b", fav: false },
+    { title: "Ace on Mirage", game: "Counter-Strike 2", dur: "0:25", size: "56 MB", age: "3 hours ago", tone: "c", fav: false },
+    { title: "That persuasion check", game: "Baldur's Gate 3", dur: "0:58", size: "144 MB", age: "7 hours ago", tone: "d", fav: true }
+  ];
+
+  const STORE = "clipforge.theme-lab.v1";
+  let state = { ...DEFAULTS };
+  let activePreset = "lime";
+
+  const norm = (value) => {
+    let hex = String(value || "").trim().toLowerCase();
+    if (/^#[0-9a-f]{3}$/.test(hex)) hex = "#" + hex.slice(1).split("").map((c) => c + c).join("");
+    return /^#[0-9a-f]{6}$/.test(hex) ? hex : null;
+  };
+  const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const toHex = (channels) => "#" + channels.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+  const mix = (a, b, t) => toHex(rgb(a).map((v, i) => v + (rgb(b)[i] - v) * t));
+  const rgba = (hex, alpha) => `rgba(${rgb(hex).join(", ")}, ${alpha})`;
+  const luminance = (hex) => {
+    const channels = rgb(hex).map((v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+  const contrast = (a, b) => {
+    const l1 = luminance(a);
+    const l2 = luminance(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      for (const key of Object.keys(DEFAULTS)) {
+        const value = norm(parsed[key]);
+        if (value) state[key] = value;
+      }
+    } catch (error) {
+      /* localStorage can be unavailable; defaults are fine. */
+    }
+  }
+  function save() {
+    try {
+      localStorage.setItem(STORE, JSON.stringify(state));
+    } catch (error) {
+      /* ignore */
+    }
+  }
+
+  function renderControls() {
+    const host = $("controls");
+    host.innerHTML = "";
+    for (const group of GROUPS) {
+      const section = document.createElement("section");
+      section.className = "group";
+      const title = document.createElement("p");
+      title.className = "group__title";
+      title.textContent = group.title;
+      section.appendChild(title);
+      for (const [key, label] of group.items) {
+        const row = document.createElement("div");
+        row.className = "ctrl";
+        row.innerHTML = `
+          <span class="ctrl__name">${label}</span>
+          <span class="ctrl__field">
+            <input type="color" id="color-${key}" aria-label="${label} color" />
+            <input class="hex" id="hex-${key}" aria-label="${label} hex value" spellcheck="false" maxlength="7" />
+          </span>`;
+        section.appendChild(row);
+      }
+      host.appendChild(section);
+    }
+    host.addEventListener("input", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      const key = target.id.replace(/^(color|hex)-/, "");
+      if (!(key in DEFAULTS)) return;
+      if (target.type === "color") {
+        state[key] = target.value;
+        activePreset = null;
+        renderPresets();
+        apply();
+      } else if (target.classList.contains("hex")) {
+        const value = norm(target.value);
+        if (value) {
+          state[key] = value;
+          activePreset = null;
+          renderPresets();
+          apply();
+        }
+      }
+    });
+    host.addEventListener("change", (event) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement && target.classList.contains("hex")) {
+        target.value = state[target.id.replace("hex-", "")].toUpperCase();
+      }
+    });
+  }
+
+  function renderPresets() {
+    const host = $("presets");
+    host.innerHTML = "";
+    for (const preset of PRESETS) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "preset" + (activePreset === preset.id ? " is-on" : "");
+      const dots = [preset.colors.bg, preset.colors.surface, preset.colors.accent]
+        .map((color) => `<i style="background:${color}"></i>`)
+        .join("");
+      button.innerHTML = `<span class="preset__dots" aria-hidden="true">${dots}</span>${preset.name}`;
+      button.addEventListener("click", () => {
+        state = { ...DEFAULTS, ...preset.colors };
+        activePreset = preset.id;
+        renderPresets();
+        apply();
+      });
+      host.appendChild(button);
+    }
+  }
+
+  function syncInputs() {
+    for (const key of Object.keys(DEFAULTS)) {
+      const color = $(`color-${key}`);
+      const hex = $(`hex-${key}`);
+      if (color) color.value = state[key];
+      if (hex && document.activeElement !== hex) hex.value = state[key].toUpperCase();
+    }
+  }
+
+  function apply() {
+    const app = $("app");
+    for (const [key, name] of Object.entries(VAR)) {
+      app.style.setProperty(name, state[key]);
+    }
+    app.style.setProperty("--surface-3", mix(state.surface2, state.text, 0.1));
+    app.style.setProperty("--surface-4", mix(state.surface2, state.text, 0.18));
+    app.style.setProperty("--accent-soft", rgba(state.accent, 0.12));
+    app.style.setProperty("--warn-soft", rgba(state.warn, 0.12));
+    app.style.setProperty("--danger-soft", rgba(state.danger, 0.12));
+    app.style.setProperty("--info-soft", rgba(state.info, 0.12));
+    app.style.setProperty("--success-soft", rgba(state.success, 0.12));
+
+    document.documentElement.style.setProperty("--page-accent", state.accent);
+    document.documentElement.style.setProperty("--page-accent-ink", state.accentInk);
+    document.documentElement.style.setProperty("--page-accent-soft", rgba(state.accent, 0.12));
+
+    syncInputs();
+    renderContrast();
+    renderCss();
+    save();
+  }
+
+  function renderContrast() {
+    const checks = [
+      ["Text on background", state.text, state.bg],
+      ["Muted text on background", state.textMuted, state.bg],
+      ["Text on surface", state.text, state.surface],
+      ["Ink on accent", state.accentInk, state.accent]
+    ];
+    $("checks").innerHTML = checks.map(([label, fg, bg]) => {
+      const ratio = contrast(fg, bg);
+      const ok = ratio >= 4.5;
+      const tag = ratio >= 7 ? "AAA" : ratio >= 4.5 ? "AA" : ratio >= 3 ? "AA large" : "Low";
+      return `<span class="check ${ok ? "is-ok" : "is-bad"}"><b>${ratio.toFixed(1)}</b>${label}<span class="check__tag">${tag}</span></span>`;
+    }).join("");
+  }
+
+  function renderCss() {
+    const lines = [":root {"];
+    for (const [key, name] of Object.entries(VAR)) lines.push(`  ${name}: ${state[key]};`);
+    lines.push(`  --surface-3: ${mix(state.surface2, state.text, 0.1)};`);
+    lines.push(`  --surface-4: ${mix(state.surface2, state.text, 0.18)};`);
+    lines.push(`  --accent-soft: ${rgba(state.accent, 0.12)};`);
+    lines.push(`  --warn-soft: ${rgba(state.warn, 0.12)};`);
+    lines.push(`  --danger-soft: ${rgba(state.danger, 0.12)};`);
+    lines.push(`  --info-soft: ${rgba(state.info, 0.12)};`);
+    lines.push(`  --success-soft: ${rgba(state.success, 0.12)};`);
+    lines.push("}");
+    $("css").textContent = lines.join("\n");
+  }
+
+  function cardMarkup(clip) {
+    return `
+      <article class="card${clip.fav ? " is-fav" : ""}">
+        <div class="card__media">
+          <div class="thumb thumb--${clip.tone}">
+            <span class="thumb__play"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5L8 5.5Z"/></svg></span></span>
+          </div>
+          <span class="dur">${clip.dur}</span>
+          <button class="star${clip.fav ? " is-on" : ""}" type="button" aria-label="${clip.fav ? "Remove from favorites" : "Add to favorites"}">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.4L12 17.4l-5.8 3 1.1-6.4L2.6 9.4l6.5-.9L12 2.6Z"/></svg>
+          </button>
+        </div>
+        <div class="card__body">
+          <p class="card__title">${clip.title}</p>
+          <p class="card__meta">
+            <span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 7h10a4 4 0 0 1 4 4v2a4 4 0 0 1-4 4h-1l-2 2h-4l-2-2H7a4 4 0 0 1-4-4v-2a4 4 0 0 1 4-4Z"/></svg>${clip.game}</span>
+            <span>${clip.size}</span>
+            <span>${clip.age}</span>
+          </p>
+          <div class="card__actions">
+            <button class="act" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5ZM20.7 6.3l-3-3-1.4 1.4 3 3 1.4-1.4Z"/></svg>Rename</button>
+            <button class="act push" type="button" aria-label="Reveal file"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h7l2 2h9v12H3V5Z"/></svg></button>
+            <button class="act" type="button" aria-label="Export"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 4h2v9l3-3 1.4 1.4L12 16.8 6.6 11.4 8 10l3 3V4ZM4 18h16v2H4v-2Z"/></svg></button>
+            <button class="act" type="button" aria-label="Delete"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 4h8l1 2h4v2H3V6h4l1-2Zm-2 6h12l-1 10H7L6 10Z"/></svg></button>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  function renderCards() {
+    const markup = CLIPS.map(cardMarkup).join("");
+    $("recent-cards").innerHTML = markup;
+    $("library-cards").innerHTML = markup;
+  }
+
+  let toastTimer = 0;
+  function toast(message) {
+    const node = $("toast");
+    $("toast-text").textContent = message;
+    node.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => {
+      node.hidden = true;
+    }, 2600);
+  }
+
+  function setView(view) {
+    const app = $("app");
+    app.dataset.view = view;
+    document.querySelectorAll("#view-seg button").forEach((button) => {
+      button.classList.toggle("is-on", button.dataset.view === view);
+    });
+    if (view === "library") {
+      $("view-eyebrow").textContent = "Library";
+      $("view-title").textContent = "Your clips";
+      $("view-sub").textContent = "4 clips · 379 MB · 2 today";
+    } else {
+      $("view-eyebrow").textContent = "Dashboard";
+      $("view-title").textContent = "Replay buffer";
+      $("view-sub").textContent = "Save the last few seconds of play whenever something worth keeping happens.";
+    }
+  }
+
+  function setState(next) {
+    const app = $("app");
+    app.dataset.state = next;
+    document.querySelectorAll("#state-seg button").forEach((button) => {
+      button.classList.toggle("is-on", button.dataset.state === next);
+    });
+    const pill = $("pill-text");
+    const label = $("primary-label");
+    const hint = $("hint");
+    const error = $("errorline");
+    const bar = $("bar-fill");
+    const held = $("held");
+    error.hidden = true;
+    if (next === "recording") {
+      pill.textContent = "Recording";
+      label.textContent = "Save clip";
+      hint.textContent = "Then press Alt + C when something happens.";
+      bar.style.width = "78%";
+      held.textContent = "24";
+    } else if (next === "idle") {
+      pill.textContent = "Idle";
+      label.textContent = "Start keeping the last 30 s";
+      hint.textContent = "Starts automatically when a game launches.";
+      bar.style.width = "0%";
+      held.textContent = "0";
+    } else {
+      pill.textContent = "Error";
+      label.textContent = "Try again";
+      hint.textContent = "The capture pipeline stopped.";
+      error.hidden = false;
+      bar.style.width = "0%";
+      held.textContent = "0";
+    }
+  }
+
+  function bindUi() {
+    document.querySelectorAll("#view-seg button").forEach((button) => {
+      button.addEventListener("click", () => setView(button.dataset.view));
+    });
+    document.querySelectorAll("#state-seg button").forEach((button) => {
+      button.addEventListener("click", () => setState(button.dataset.state));
+    });
+    document.querySelectorAll("[data-goto]").forEach((button) => {
+      button.addEventListener("click", () => setView(button.dataset.goto));
+    });
+    $("primary").addEventListener("click", () => {
+      const app = $("app");
+      if (app.dataset.state === "recording") {
+        toast("Saved - ELDEN RING clip - 15:42");
+      } else if (app.dataset.state === "error") {
+        setState("recording");
+        toast("Capture restarted");
+      } else {
+        setState("recording");
+        toast("Waiting for a game - the buffer starts automatically");
+      }
+    });
+    $("reset").addEventListener("click", () => {
+      state = { ...DEFAULTS };
+      activePreset = "lime";
+      renderPresets();
+      apply();
+      toast("Reset to Lime colors");
+    });
+    $("copy").addEventListener("click", async () => {
+      const text = $("css").textContent;
+      const button = $("copy");
+      const original = button.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = "Copied";
+      } catch (error) {
+        const range = document.createRange();
+        range.selectNodeContents($("css"));
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        button.textContent = "Select and copy";
+      }
+      window.setTimeout(() => {
+        button.textContent = original.trim();
+      }, 2200);
+    });
+  }
+
+  load();
+  renderControls();
+  renderPresets();
+  renderCards();
+  bindUi();
+  apply();
+  setView("dashboard");
+  setState("recording");
+</script>

@@ -1,0 +1,138 @@
+import { useState } from "react";
+
+import { backend } from "../lib/bridge";
+import { errorMessage } from "../lib/errors";
+import type { AuthStatus, Clip, ShareInfo } from "../lib/types";
+import { useApp } from "./store";
+
+/** Upload errors that mean the share server wants an Authentik session. */
+const AUTH_ERROR = /sign[- ]?in|401|unauthori[sz]ed|authentik/i;
+
+function isAuthError(error: unknown): boolean {
+  return AUTH_ERROR.test(errorMessage(error));
+}
+
+/**
+ * Opening a clip's share: reuse the link we already have, otherwise upload it
+ * and open the dialog once the server answers.
+ *
+ * Uploads need an Authentik account unless the server still uses a static
+ * upload token. When the user is signed out the browser opens for sign-in
+ * first - they already clicked Share, so this is the action they asked for.
+ */
+export function useShareActions() {
+  const {
+    settings,
+    shares,
+    setShare,
+    openShareDialog,
+    openSettings,
+    pushToast,
+  } = useApp();
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  function offerSignIn(message: string) {
+    pushToast("error", message, {
+      label: "Open sharing settings",
+      run: () => openSettings("sharing"),
+    });
+    openSettings("sharing");
+  }
+
+  async function share(clip: Clip): Promise<void> {
+    // An existing link can still be opened even when sharing has since been
+    // switched off; only a new upload needs a server.
+    const known = shares[clip.id];
+    if (known) {
+      openShareDialog(clip, known);
+      return;
+    }
+
+    if (!settings?.shareBaseUrl.trim()) {
+      pushToast(
+        "error",
+        "Add your share server URL in Settings → Sharing before sharing a clip.",
+        {
+          label: "Open sharing settings",
+          run: () => openSettings("sharing"),
+        },
+      );
+      return;
+    }
+
+    setUploadingId(clip.id);
+    try {
+      // A static token is the legacy path and needs no account. Otherwise ask
+      // for the Authentik session, and sign in first when there is none.
+      if (!settings.shareToken?.trim()) {
+        let auth: AuthStatus | null = null;
+        try {
+          auth = await backend.authStatus();
+        } catch {
+          // An older build without auth commands cannot answer. Let the upload
+          // report the real problem instead of blocking a legacy server.
+          auth = null;
+        }
+
+        if (auth && !auth.signedIn) {
+          pushToast(
+            "info",
+            "Opening your browser to sign in with Authentik…",
+          );
+          try {
+            auth = await backend.authLogin();
+          } catch (error) {
+            offerSignIn(`Could not sign in: ${errorMessage(error)}`);
+            return;
+          }
+          if (!auth.signedIn) {
+            offerSignIn(
+              "Sign-in did not finish. Sign in, then share the clip again.",
+            );
+            return;
+          }
+          pushToast(
+            "success",
+            `Signed in as ${auth.name ?? auth.sub ?? "your Authentik account"}.`,
+          );
+        }
+      }
+
+      // The share list travels with the library, but it can lag behind a share
+      // made elsewhere. Ask for this clip first so a second copy is not
+      // uploaded; when the server is unreachable this fails quietly and the
+      // upload below reports the real problem.
+      let found: ShareInfo | null = null;
+      try {
+        found = await backend.getShare(clip.id);
+      } catch {
+        // Ignored on purpose: share_clip below gives the actionable error.
+      }
+      if (found) {
+        setShare(clip.id, found);
+        openShareDialog(clip, found);
+        return;
+      }
+
+      const uploaded = await backend.shareClip(clip.id);
+      setShare(clip.id, uploaded);
+      openShareDialog(clip, uploaded);
+      pushToast("success", `Uploaded “${clip.title}”.`);
+    } catch (error) {
+      const detail = `Could not share “${clip.title}”: ${errorMessage(error)}`;
+      if (isAuthError(error)) {
+        offerSignIn(detail);
+      } else {
+        pushToast("error", detail);
+      }
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
+  return {
+    share,
+    uploadingId,
+    isUploading: (clipId: string) => uploadingId === clipId,
+  };
+}

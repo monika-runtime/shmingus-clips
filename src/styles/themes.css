@@ -1,0 +1,83 @@
+/*
+ * Optional app themes. The default (Lime) lives in tokens.css; these
+ * blocks override the same tokens on the document root. Soft tints and the
+ * third/fourth surfaces are derived from the base colors.
+ */
+
+:root[data-app-theme="violet"] {
+  --bg: #0b0910;
+  --bg-soft: #0f0c16;
+  --surface: #17121f;
+  --surface-2: #1e1829;
+  --surface-3: #332d3e;
+  --surface-4: #443e4f;
+  --border: #2b2338;
+  --border-strong: #3a304b;
+  --text: #f1ebfa;
+  --text-muted: #b0a3c2;
+  --text-faint: #7c708d;
+  --accent: #c9a6ff;
+  --accent-strong: #b58bff;
+  --accent-soft: rgba(201, 166, 255, 0.12);
+  --accent-ink: #160b26;
+  --warn: #ff8a3d;
+  --warn-soft: rgba(255, 138, 61, 0.12);
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.11);
+  --info: #7fb4ff;
+  --info-soft: rgba(127, 180, 255, 0.11);
+  --success: #8ce99a;
+  --success-soft: rgba(140, 233, 154, 0.11);
+}
+
+:root[data-app-theme="cyan"] {
+  --bg: #060b0e;
+  --bg-soft: #091116;
+  --surface: #0f181e;
+  --surface-2: #14212a;
+  --surface-3: #29363f;
+  --surface-4: #3a474f;
+  --border: #1e2f3a;
+  --border-strong: #2a4050;
+  --text: #e6f5fa;
+  --text-muted: #9bb3bf;
+  --text-faint: #6b8492;
+  --accent: #5ee7ff;
+  --accent-strong: #3ad4ef;
+  --accent-soft: rgba(94, 231, 255, 0.12);
+  --accent-ink: #04141a;
+  --warn: #ffb84d;
+  --warn-soft: rgba(255, 184, 77, 0.12);
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.11);
+  --info: #7fb4ff;
+  --info-soft: rgba(127, 180, 255, 0.11);
+  --success: #8ce99a;
+  --success-soft: rgba(140, 233, 154, 0.11);
+}
+
+:root[data-app-theme="amber"] {
+  --bg: #0c0a08;
+  --bg-soft: #100d0a;
+  --surface: #1a1510;
+  --surface-2: #221b14;
+  --surface-3: #373028;
+  --surface-4: #484139;
+  --border: #2e251b;
+  --border-strong: #3d3224;
+  --text: #f4ece1;
+  --text-muted: #b3a392;
+  --text-faint: #7d7060;
+  --accent: #ffb84d;
+  --accent-strong: #ffa726;
+  --accent-soft: rgba(255, 184, 77, 0.12);
+  --accent-ink: #1c1205;
+  --warn: #ff7a45;
+  --warn-soft: rgba(255, 122, 69, 0.12);
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.11);
+  --info: #7fb4ff;
+  --info-soft: rgba(127, 180, 255, 0.11);
+  --success: #8ce99a;
+  --success-soft: rgba(140, 233, 154, 0.11);
+}

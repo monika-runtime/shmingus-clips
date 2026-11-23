@@ -1,0 +1,55 @@
+[package]
+name = "clipforge"
+version = "0.1.0"
+description = "Local game clip recorder for Linux"
+authors = ["maf"]
+edition = "2024"
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+name = "clipforge_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "protocol-asset"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "7"
+parking_lot = "0.13"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process", "fs", "net", "io-util"] }
+futures-util = "0.3"
+log = "0.4"
+env_logger = "0.11"
+notify-rust = "4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls"] }
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+
+ashpd = { version = "0.14", features = ["screencast", "global_shortcuts"] }
+
+gstreamer = "0.25"
+gstreamer-app = "0.25"
+gstreamer-video = "0.25"
+gstreamer-pbutils = "0.25"
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
