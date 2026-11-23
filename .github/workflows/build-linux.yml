@@ -78,6 +78,48 @@ jobs:
             src-tauri/target/release/bundle/deb/*.deb
           if-no-files-found: error
 
+      - name: Sign the AppImage for the updater
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          pnpm tauri signer sign \
+            "src-tauri/target/release/bundle/appimage/Shmingus Clips_${version}_amd64.AppImage"
+
+      - name: Prepare release assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          mkdir -p release
+          cp "src-tauri/target/release/bundle/appimage/Shmingus Clips_${version}_amd64.AppImage" \
+            "release/shmingus-clips_${version}_amd64.AppImage"
+          cp "src-tauri/target/release/bundle/deb/Shmingus Clips_${version}_amd64.deb" \
+            "release/shmingus-clips_${version}_amd64.deb"
+          cp "src-tauri/target/release/bundle/appimage/Shmingus Clips_${version}_amd64.AppImage.sig" \
+            "release/shmingus-clips_${version}_amd64.AppImage.sig"
+          node -e '
+            const fs = require("fs");
+            const v = process.argv[1];
+            const signature = fs
+              .readFileSync(`release/shmingus-clips_${v}_amd64.AppImage.sig`, "utf8")
+              .trim();
+            const manifest = {
+              version: v,
+              notes: `Shmingus Clips ${v}`,
+              pub_date: new Date().toISOString(),
+              platforms: {
+                "linux-x86_64": {
+                  signature,
+                  url: `https://github.com/monika-runtime/shmingus-clips/releases/download/v${v}/shmingus-clips_${v}_amd64.AppImage`,
+                },
+              },
+            };
+            fs.writeFileSync("release/latest.json", JSON.stringify(manifest, null, 2));
+          ' "$version"
+          cat release/latest.json
+
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -86,5 +128,4 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            src-tauri/target/release/bundle/appimage/*.AppImage
-            src-tauri/target/release/bundle/deb/*.deb
+            release/*

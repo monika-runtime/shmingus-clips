@@ -1774,3 +1774,34 @@
   color: var(--text-faint);
   font-size: 10.5px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Updates                                                             */
+/* ------------------------------------------------------------------ */
+
+.update-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+}
+
+.update-card__body {
+  min-width: 0;
+}
+
+.update-card__version {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.update-card__note {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}

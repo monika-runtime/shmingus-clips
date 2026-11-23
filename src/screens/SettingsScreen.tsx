@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Check,
   CheckCircle2,
+  Download,
   FolderOpen,
   Keyboard,
   LogIn,
@@ -30,11 +31,12 @@ import { Select } from "../components/ui/Select";
 import { Slider } from "../components/ui/Slider";
 import { Spinner } from "../components/ui/Spinner";
 import { Switch } from "../components/ui/Switch";
-import { backend, chooseDirectory } from "../lib/bridge";
-import { DEFAULT_HOTKEYS } from "../lib/defaults";
+import { backend, chooseDirectory, isDesktop } from "../lib/bridge";
+import { APP_VERSION, DEFAULT_HOTKEYS } from "../lib/defaults";
 import { errorMessage } from "../lib/errors";
 import { formatBytes, pluralize, signature } from "../lib/format";
 import { previewAuthSample } from "../lib/preview";
+import { checkForUpdate, downloadAndInstall, type UpdateInfo } from "../lib/updates";
 import {
   applyTheme,
   storedTheme,
@@ -170,6 +172,8 @@ export function SettingsScreen() {
     pushToast,
   } = useApp();
 
+  const desktop = isDesktop();
+
   const [draft, setDraft] = useState<Settings | null>(null);
   const [theme, setTheme] = useState<AppTheme>(() => storedTheme());
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -187,6 +191,41 @@ export function SettingsScreen() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [updateInstalling, setUpdateInstalling] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
+  const [updateChecked, setUpdateChecked] = useState(false);
+
+  async function checkUpdates() {
+    setUpdateChecking(true);
+    setUpdateError(null);
+    setUpdateChecked(false);
+    try {
+      const update = await checkForUpdate();
+      setUpdateInfo(update);
+      setUpdateChecked(true);
+    } catch (error) {
+      setUpdateInfo(null);
+      setUpdateError(errorMessage(error));
+    } finally {
+      setUpdateChecking(false);
+    }
+  }
+
+  async function installUpdate() {
+    setUpdateInstalling(true);
+    setUpdateError(null);
+    try {
+      await downloadAndInstall(setUpdateProgress);
+      pushToast("success", "Update installed. Restarting…");
+    } catch (error) {
+      setUpdateError(errorMessage(error));
+      setUpdateInstalling(false);
+      setUpdateProgress(null);
+    }
+  }
 
   useEffect(() => {
     setDraft((current) => current ?? settings);
@@ -1013,6 +1052,57 @@ export function SettingsScreen() {
                 checked={draft.clipSound}
                 onChange={(next) => patch({ clipSound: next })}
               />
+              </Panel>
+              <Panel
+                label="Application"
+                title="Updates"
+                description={
+                  desktop
+                    ? "Shmingus Clips checks GitHub for a newer release at launch and can install it in place. Releases are signed, so only builds from this project install."
+                    : "Updates are available in the desktop app."
+                }
+                actions={
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={updateChecking ? <Spinner /> : <RefreshCw size={15} />}
+                    disabled={!desktop || updateChecking || updateInstalling}
+                    onClick={() => void checkUpdates()}
+                  >
+                    {updateChecking ? "Checking…" : "Check for updates"}
+                  </Button>
+                }
+              >
+                <div className="update-card">
+                  <div className="update-card__body">
+                    <p className="update-card__version">Version {APP_VERSION}</p>
+                    <p className="update-card__note">
+                      {updateInstalling
+                        ? updateProgress === null
+                          ? "Downloading and installing…"
+                          : `Downloading and installing… ${updateProgress}%`
+                        : updateInfo
+                          ? `Version ${updateInfo.version} is ready to install.`
+                          : updateChecked
+                            ? "You are on the latest version."
+                            : "Checked at launch; you can check any time."}
+                    </p>
+                  </div>
+                  {updateInfo && !updateInstalling && (
+                    <Button
+                      variant="primary"
+                      icon={<Download size={15} />}
+                      onClick={() => void installUpdate()}
+                    >
+                      Install and restart
+                    </Button>
+                  )}
+                </div>
+                {updateError && (
+                  <Alert tone="warn" title="Update check failed">
+                    {updateError}
+                  </Alert>
+                )}
               </Panel>
             </>
           )}
