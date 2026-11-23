@@ -105,7 +105,7 @@ impl RunningPipeline {
         let finished_thread = finished.clone();
 
         let join = std::thread::Builder::new()
-            .name("clipforge-gst".into())
+            .name("shmingus-clips-gst".into())
             .spawn(move || pipeline_thread(spec, command_rx, ready_tx, finished_thread, on_error))
             .map_err(|err| {
                 AppError::Capture(format!("could not start the capture thread: {err}"))

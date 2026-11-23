@@ -51,7 +51,7 @@ fn default_export_dir() -> PathBuf {
     dirs::video_dir()
         .or_else(dirs::home_dir)
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("Clipforge")
+        .join("Shmingus Clips")
         .join("Exports")
 }
 
@@ -802,7 +802,7 @@ mod tests {
     impl TempDir {
         fn new(tag: &str) -> Self {
             let path = std::env::temp_dir()
-                .join(format!("clipforge-library-{tag}-{}", uuid::Uuid::new_v4()));
+                .join(format!("shmingus-clips-library-{tag}-{}", uuid::Uuid::new_v4()));
             std::fs::create_dir_all(&path).expect("create temp dir");
             Self(path)
         }

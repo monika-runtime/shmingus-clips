@@ -246,7 +246,7 @@ pub async fn wait_for_new_segment(ring: &SegmentRing, previous: u32, timeout: Du
 fn notify(clip: &Clip) {
     let title = clip.title.clone();
     let spawned = std::thread::Builder::new()
-        .name("clipforge-notify".into())
+        .name("shmingus-clips-notify".into())
         .spawn(move || {
             let result = notify_rust::Notification::new()
                 .summary("Clip saved")

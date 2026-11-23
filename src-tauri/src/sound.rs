@@ -17,7 +17,7 @@ const CHIME: &[u8] = include_bytes!("../resources/clip-saved.wav");
 /// Play the clip-saved chime. Never blocks the caller and never fails loudly.
 pub fn play_clip_saved() {
     let spawned = std::thread::Builder::new()
-        .name("clipforge-sound".into())
+        .name("shmingus-clips-sound".into())
         .spawn(|| {
             if let Err(err) = play() {
                 log::warn!("could not play the clip sound: {err}");

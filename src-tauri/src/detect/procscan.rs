@@ -38,7 +38,7 @@ const IGNORED_PREFIXES: [&str; 11] = [
     "gamescope",
     "heroic",
     "lutris",
-    "clipforge",
+    "shmingus-clips",
 ];
 
 /// Parse a NUL-separated `/proc/<pid>/environ` block.
@@ -169,7 +169,7 @@ pub fn is_ignored_process(comm: &str, exe: Option<&Path>) -> bool {
         }
         if let Some(dir) = exe.to_str() {
             let lower = dir.to_ascii_lowercase();
-            if lower.contains("/clipforge/") {
+            if lower.contains("/shmingus-clips/") {
                 return true;
             }
         }
@@ -316,7 +316,7 @@ mod tests {
             "pressure-vessel",
             "heroic",
             "lutris",
-            "clipforge",
+            "shmingus-clips",
         ] {
             assert!(is_ignored_process(comm, None), "{comm} should be ignored");
         }
@@ -324,7 +324,7 @@ mod tests {
         assert!(is_ignored_process(
             "something",
             Some(Path::new(
-                "/home/user/clipforge/src-tauri/target/debug/clipforge"
+                "/home/user/shmingus-clips/src-tauri/target/debug/shmingus-clips"
             ))
         ));
     }

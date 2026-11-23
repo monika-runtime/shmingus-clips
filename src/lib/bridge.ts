@@ -142,7 +142,7 @@ export function videoUrl(clip: { id: string }, mediaBase: string): string {
 export async function chooseDirectory(
   defaultPath?: string,
 ): Promise<string | null> {
-  if (!isDesktop()) return "/home/user/Videos/Clipforge";
+  if (!isDesktop()) return "/home/user/Videos/Shmingus Clips";
   const picked = await open({
     directory: true,
     multiple: false,

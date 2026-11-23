@@ -11,7 +11,7 @@
 //!    A directly executed AppImage has neither, so KDE refuses GlobalShortcuts
 //!    ("An app id is required") and attributes ScreenCast to the parent app.
 //!    Register a desktop entry pointing at the AppImage and, when needed,
-//!    re-exec inside a `clipforge` app scope.
+//!    re-exec inside a `shmingus-clips` app scope.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -34,6 +34,7 @@ pub fn prepare() {
     drop_bundled_python_env();
     prefer_host_libraries();
     fix_gstreamer();
+    remove_legacy_desktop_entry();
     install_icons();
     ensure_desktop_entry(&appimage);
     maybe_reexec_in_app_scope(&appimage);
@@ -168,7 +169,7 @@ fn prefer_host_libraries() {
 
 /// True when this process really runs from Shmingus Clips' own AppImage: either
 /// the executable lives inside an AppImage mount, or the bundle is named after
-/// the app (the bundled binary is still `clipforge`; the display name is now
+/// the app (the bundled binary is still `shmingus-clips`; the display name is now
 /// "Shmingus Clips").
 fn is_own_appimage(appimage: &Path) -> bool {
     let exe_in_mount = std::env::current_exe()
@@ -178,7 +179,7 @@ fn is_own_appimage(appimage: &Path) -> bool {
         .file_name()
         .map(|name| {
             let name = name.to_string_lossy().to_lowercase();
-            name.contains("clipforge") || name.contains("shmingus")
+            name.contains("shmingus-clips") || name.contains("shmingus")
         })
         .unwrap_or(false);
     exe_in_mount || named_app
@@ -238,13 +239,14 @@ fn host_plugin_dir() -> Option<PathBuf> {
 // Portal identity
 // ---------------------------------------------------------------------------
 
-// The internal app id, desktop file name and marker stay `clipforge` so portal
-// identity, shortcut bindings and existing desktop entries survive the
-// display-name change; only the human-readable Name below is rebranded.
-const APP_ID: &str = "clipforge";
-const DESKTOP_MARKER: &str = "X-Clipforge-AppImage=";
+// The internal app id and desktop file name. Current builds use the Shmingus
+// Clips names; the Clipforge entry from before the rename is removed below.
+const APP_ID: &str = "shmingus-clips";
+const DESKTOP_MARKER: &str = "X-Shmingus-Clips-AppImage=";
+const LEGACY_APP_ID: &str = "clipforge";
+const LEGACY_DESKTOP_MARKER: &str = "X-Clipforge-AppImage=";
 
-/// Register `~/.local/share/applications/clipforge.desktop` pointing at this
+/// Register `~/.local/share/applications/shmingus-clips.desktop` pointing at this
 /// AppImage. The portal needs a loadable desktop entry to accept the app id;
 /// GLib rejects an entry whose `Exec` cannot be resolved, so the path must be
 /// absolute.
@@ -290,9 +292,9 @@ fn ensure_desktop_entry(appimage: &Path) {
          Name=Shmingus Clips\n\
          Comment=Instant game clips on Linux\n\
          Exec={quoted} %U\n\
-         Icon=clipforge\n\
+         Icon=shmingus-clips\n\
          Terminal=false\n\
-         StartupWMClass=clipforge\n\
+         StartupWMClass=shmingus-clips\n\
          Categories=AudioVideo;Video;\n\
          {DESKTOP_MARKER}{exec}\n"
     );
@@ -305,7 +307,7 @@ fn ensure_desktop_entry(appimage: &Path) {
 }
 
 /// Copy the bundle's launcher icons into the user's icon theme, so Plasma can
-/// resolve the desktop entry's `Icon=clipforge` after the AppImage unmounts.
+/// resolve the desktop entry's `Icon=shmingus-clips` after the AppImage unmounts.
 /// Without this the launcher and taskbar fall back to a generic icon.
 fn install_icons() {
     let Some(appdir) = app_dir() else {
@@ -338,13 +340,31 @@ fn install_icons() {
     }
 }
 
-/// The mounted AppImage root: `<appdir>/usr/bin/clipforge` is the binary.
+/// The mounted AppImage root: `<appdir>/usr/bin/shmingus-clips` is the binary.
 fn app_dir() -> Option<PathBuf> {
     if let Some(dir) = std::env::var_os("APPDIR") {
         return Some(PathBuf::from(dir));
     }
     let exe = std::env::current_exe().ok()?;
     exe.parent()?.parent()?.parent().map(PathBuf::from)
+}
+
+/// Drop the launcher entry written under the old Clipforge name. Only touches a
+/// file carrying our marker, never someone else's entry.
+fn remove_legacy_desktop_entry() {
+    let Some(home) = user_data_home() else {
+        return;
+    };
+    let path = home
+        .join("applications")
+        .join(format!("{LEGACY_APP_ID}.desktop"));
+    let Ok(existing) = std::fs::read_to_string(&path) else {
+        return;
+    };
+    if existing.contains(LEGACY_DESKTOP_MARKER) {
+        let _ = std::fs::remove_file(&path);
+        log::info!("AppImage runtime: removed the old Clipforge launcher entry");
+    }
 }
 
 fn system_desktop_entry_exists() -> bool {
@@ -365,9 +385,9 @@ fn user_data_home() -> Option<PathBuf> {
 
 /// XDG portals only accept a host app that lives in an `app-<id>-<random>`
 /// systemd scope. A directly launched AppImage is in the session/launcher
-/// scope instead, so move ourselves into a `clipforge` app scope and hand over.
+/// scope instead, so move ourselves into a `shmingus-clips` app scope and hand over.
 fn maybe_reexec_in_app_scope(appimage: &Path) {
-    if std::env::var_os("CLIPFORGE_NO_REEXEC").is_some() {
+    if std::env::var_os("SHMINGUS_CLIPS_NO_REEXEC").is_some() {
         return;
     }
     // Diagnostics and the headless selftest never touch a portal.
@@ -377,7 +397,7 @@ fn maybe_reexec_in_app_scope(appimage: &Path) {
     {
         return;
     }
-    if current_scope_is_clipforge() {
+    if current_scope_is_ours() {
         return;
     }
 
@@ -410,7 +430,7 @@ fn maybe_reexec_in_app_scope(appimage: &Path) {
     }
 }
 
-fn current_scope_is_clipforge() -> bool {
+fn current_scope_is_ours() -> bool {
     let Ok(cgroup) = std::fs::read_to_string("/proc/self/cgroup") else {
         return false;
     };

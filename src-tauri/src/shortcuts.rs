@@ -33,9 +33,9 @@ use crate::state::AppState;
 /// id it once stored with `current=none` (denied, or refused because something
 /// else held the key) stays inactive forever, and every later bind for that id
 /// comes back with an empty trigger. New ids start from a clean slate.
-pub const SAVE_CLIP: &str = "dev.clipforge.save-clip";
-pub const TOGGLE_BUFFER: &str = "dev.clipforge.toggle-buffer";
-pub const TOGGLE_MIC: &str = "dev.clipforge.toggle-mic";
+pub const SAVE_CLIP: &str = "net.shmingus.clips.save-clip";
+pub const TOGGLE_BUFFER: &str = "net.shmingus.clips.toggle-buffer";
+pub const TOGGLE_MIC: &str = "net.shmingus.clips.toggle-mic";
 
 /// How long the start-up probe waits for the portal before giving up.
 const PROBE_TIMEOUT: Duration = Duration::from_secs(3);
@@ -140,7 +140,7 @@ pub fn init(app: &AppHandle) -> Result<()> {
 fn probe_portal() -> Result<()> {
     let (sender, receiver) = std::sync::mpsc::channel();
     std::thread::Builder::new()
-        .name("clipforge-shortcuts-probe".into())
+        .name("shmingus-clips-shortcuts-probe".into())
         .spawn(move || {
             let outcome = tauri::async_runtime::block_on(async {
                 match tokio::time::timeout(PROBE_TIMEOUT, GlobalShortcuts::new()).await {

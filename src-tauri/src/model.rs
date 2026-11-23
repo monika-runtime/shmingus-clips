@@ -144,7 +144,7 @@ pub fn default_save_dir() -> String {
     let base = dirs::video_dir()
         .or_else(dirs::home_dir)
         .unwrap_or_else(|| std::path::PathBuf::from("."));
-    base.join("Clipforge").to_string_lossy().to_string()
+    base.join("Shmingus Clips").to_string_lossy().to_string()
 }
 
 // ---------------------------------------------------------------------------

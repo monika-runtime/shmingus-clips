@@ -27,7 +27,7 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
         [&open, &save, &toggle, &sep1, &folder, &sep2, &quit];
     let menu = Menu::with_items(app, &items)?;
 
-    let mut builder = TrayIconBuilder::with_id("clipforge-tray")
+    let mut builder = TrayIconBuilder::with_id("shmingus-clips-tray")
         .menu(&menu)
         .tooltip("Shmingus Clips - replay buffer")
         .show_menu_on_left_click(false);

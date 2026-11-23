@@ -32,7 +32,7 @@ impl MediaServer {
             .map_err(|err| AppError::msg(format!("media server address: {err}")))?;
 
         thread::Builder::new()
-            .name("clipforge-media".into())
+            .name("shmingus-clips-media".into())
             .spawn(move || {
                 for stream in listener.incoming() {
                     match stream {

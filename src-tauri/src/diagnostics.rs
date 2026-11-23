@@ -203,7 +203,7 @@ pub fn environment_report() -> EnvironmentReport {
     }
 }
 
-/// `clipforge --doctor`: print the environment report and exit non-zero when
+/// `shmingus-clips --doctor`: print the environment report and exit non-zero when
 /// a required dependency is missing.
 pub fn doctor() {
     let report = environment_report();
@@ -216,7 +216,7 @@ pub fn doctor() {
     }
 }
 
-/// `clipforge --selftest`: exercise the capture engine headlessly (no portal
+/// `shmingus-clips --selftest`: exercise the capture engine headlessly (no portal
 /// consent needed) and print a JSON report.
 pub fn selftest() {
     let result: Result<SelfTestReport> = tokio::runtime::Builder::new_multi_thread()

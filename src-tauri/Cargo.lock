@@ -617,42 +617,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clipforge"
-version = "0.4.2"
-dependencies = [
- "anyhow",
- "ashpd",
- "base64 0.22.1",
- "chrono",
- "dirs 7.0.0",
- "env_logger",
- "futures-util",
- "gstreamer",
- "gstreamer-app",
- "gstreamer-pbutils",
- "gstreamer-video",
- "log",
- "notify-rust",
- "parking_lot 0.13.0",
- "rand 0.8.8",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "thiserror 2.0.21",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4469,6 +4433,42 @@ name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+
+[[package]]
+name = "shmingus-clips"
+version = "0.4.2"
+dependencies = [
+ "anyhow",
+ "ashpd",
+ "base64 0.22.1",
+ "chrono",
+ "dirs 7.0.0",
+ "env_logger",
+ "futures-util",
+ "gstreamer",
+ "gstreamer-app",
+ "gstreamer-pbutils",
+ "gstreamer-video",
+ "log",
+ "notify-rust",
+ "parking_lot 0.13.0",
+ "rand 0.8.8",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "thiserror 2.0.21",
+ "tokio",
+ "uuid",
+]
 
 [[package]]
 name = "signal-hook-registry"

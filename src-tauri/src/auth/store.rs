@@ -2,7 +2,7 @@
 //!
 //! Extracted with `openid profile email offline_access`, so the access token
 //! lasts an hour and the refresh token 30 days (rotating on every use). The
-//! file is `~/.config/clipforge/auth.json`, created 0600 through a temp file and
+//! file is `~/.config/shmingus-clips/auth.json`, created 0600 through a temp file and
 //! an atomic rename. A missing or corrupt file simply means "signed out".
 
 use std::fs::OpenOptions;
@@ -42,7 +42,7 @@ pub struct AuthStore {
 }
 
 impl AuthStore {
-    /// The live store, backed by `~/.config/clipforge/auth.json`.
+    /// The live store, backed by `~/.config/shmingus-clips/auth.json`.
     pub fn load() -> Arc<Self> {
         Arc::new(Self::from_path(default_path()))
     }
@@ -200,7 +200,7 @@ mod tests {
 
     fn temp_path(label: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
-            "clipforge-auth-{}-{label}-{}.json",
+            "shmingus-clips-auth-{}-{label}-{}.json",
             std::process::id(),
             uuid::Uuid::new_v4()
         ))

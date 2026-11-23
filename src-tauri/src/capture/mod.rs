@@ -681,10 +681,10 @@ fn auto_stop_allowed(origin: Option<Origin>) -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// Headless engine test (`clipforge --selftest`)
+// Headless engine test (`shmingus-clips --selftest`)
 // ---------------------------------------------------------------------------
 
-/// Headless engine test used by `clipforge --selftest`. Needs no portal: a test
+/// Headless engine test used by `shmingus-clips --selftest`. Needs no portal: a test
 /// pattern and two tones go through the same encoder, splitmuxsink, concat and
 /// remux path as a real recording.
 pub async fn selftest() -> Result<SelfTestReport> {

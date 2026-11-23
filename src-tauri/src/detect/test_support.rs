@@ -13,7 +13,7 @@ pub struct TempDir {
 impl TempDir {
     pub fn new(label: &str) -> Self {
         let unique = format!(
-            "clipforge-detect-{label}-{}-{}",
+            "shmingus-clips-detect-{label}-{}-{}",
             std::process::id(),
             COUNTER.fetch_add(1, Ordering::Relaxed)
         );

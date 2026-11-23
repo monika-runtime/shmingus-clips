@@ -6,7 +6,7 @@ use parking_lot::RwLock;
 use crate::error::Result;
 use crate::model::Settings;
 
-/// JSON-backed settings store at `~/.config/clipforge/settings.json`.
+/// JSON-backed settings store at `~/.config/shmingus-clips/settings.json`.
 pub struct SettingsStore {
     path: PathBuf,
     inner: RwLock<Settings>,
@@ -14,6 +14,7 @@ pub struct SettingsStore {
 
 impl SettingsStore {
     pub fn load() -> Arc<Self> {
+        migrate_legacy_dirs();
         let path = config_dir().join("settings.json");
         let settings = std::fs::read_to_string(&path)
             .ok()
@@ -75,16 +76,46 @@ impl Settings {
     }
 }
 
-pub fn config_dir() -> PathBuf {
+/// Move `~/.config/clipforge` and `~/.cache/clipforge` (the pre-rename names) to
+/// their Shmingus Clips paths, leaving a symlink behind so absolute thumbnail
+/// paths stored in the library index keep resolving.
+pub fn migrate_legacy_dirs() {
+    migrate_dir(&legacy_config_dir(), &config_dir());
+    migrate_dir(&legacy_cache_dir(), &cache_dir());
+}
+
+fn legacy_config_dir() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("clipforge")
 }
 
-pub fn cache_dir() -> PathBuf {
+fn legacy_cache_dir() -> PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(|| std::env::temp_dir())
         .join("clipforge")
+}
+
+fn migrate_dir(old: &Path, new: &Path) {
+    if new.exists() || !old.exists() || std::fs::rename(old, new).is_err() {
+        return;
+    }
+    #[cfg(unix)]
+    {
+        let _ = std::os::unix::fs::symlink(new, old);
+    }
+}
+
+pub fn config_dir() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("shmingus-clips")
+}
+
+pub fn cache_dir() -> PathBuf {
+    dirs::cache_dir()
+        .unwrap_or_else(|| std::env::temp_dir())
+        .join("shmingus-clips")
 }
 
 pub fn ensure_dir(path: impl AsRef<Path>) -> Result<PathBuf> {
@@ -108,7 +139,7 @@ mod tests {
         // Written before `autoStartOnGame` existed: the container-level
         // `serde(default)` fills it from `Settings::default()`.
         let legacy = r#"{
-            "saveDir": "/tmp/clipforge-clips",
+            "saveDir": "/tmp/shmingus-clips",
             "bufferSeconds": 30,
             "fps": 60,
             "bitrateMbps": 20,

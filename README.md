@@ -65,8 +65,8 @@ sudo pacman -S --needed pipewire pipewire-pulse pipewire-audio \
 Check the machine:
 
 ```bash
-./src-tauri/target/debug/clipforge --doctor     # required dependencies
-./src-tauri/target/debug/clipforge --selftest   # headless encode → clip pipeline
+./src-tauri/target/debug/shmingus-clips --doctor     # required dependencies
+./src-tauri/target/debug/shmingus-clips --selftest   # headless encode → clip pipeline
 ```
 
 ## Build and run
@@ -78,7 +78,7 @@ pnpm tauri build --no-bundle      # release binary
 pnpm tauri build                  # bundles too; needs dpkg-deb / appimagetool
 ```
 
-`--no-bundle` produces `src-tauri/target/release/clipforge`, which is the
+`--no-bundle` produces `src-tauri/target/release/shmingus-clips`, which is the
 simplest way to run the app without packaging tools installed.
 
 ## First run
@@ -91,7 +91,7 @@ simplest way to run the app without packaging tools installed.
    clip, `Ctrl+Alt+B` toggles the buffer, `Ctrl+Alt+M` mutes the mic.
    If the shortcuts stay inactive, enable Shmingus Clips in **System Settings →
    Shortcuts** and save the hotkey settings again.
-4. Clips land in `~/Videos/Clipforge/<Game>/`.
+4. Clips land in `~/Videos/Shmingus Clips/<Game>/`.
 
 ### Why a monitor and not a window?
 
@@ -141,11 +141,11 @@ with `Range` support, reachable only by library clip id.
 
 | What | Path |
 |------|------|
-| Settings | `~/.config/clipforge/settings.json` |
-| Library index | `~/.config/clipforge/library.json` |
-| Thumbnails, temp segments | `~/.cache/clipforge/` |
-| Clips | `~/Videos/Clipforge/` (configurable) |
-| Exports | `~/Videos/Clipforge/Exports/` |
+| Settings | `~/.config/shmingus-clips/settings.json` |
+| Library index | `~/.config/shmingus-clips/library.json` |
+| Thumbnails, temp segments | `~/.cache/shmingus-clips/` |
+| Clips | `~/Videos/Shmingus Clips/` (configurable) |
+| Exports | `~/Videos/Shmingus Clips/Exports/` |
 
 ## Known limitations
 
@@ -168,8 +168,8 @@ The AppImage repairs two things the bundle cannot do by itself:
 - **Portal identity.** XDG portals identify a host app by its systemd app scope
   plus a desktop entry. A directly executed AppImage has neither, so KDE
   refuses global shortcuts and names the parent app in the screen-share prompt.
-  Shmingus Clips registers `~/.local/share/applications/clipforge.desktop` (pointing
-  at the AppImage) and re-executes itself in an `app-clipforge-*.scope`. The
+  Shmingus Clips registers `~/.local/share/applications/shmingus-clips.desktop` (pointing
+  at the AppImage) and re-executes itself in an `app-shmingus-clips-*.scope`. The
   first launch asks KDE to approve the shortcuts; approve once and they are
   remembered. If you decline, enable Shmingus Clips later under
   **System Settings → Shortcuts** and save the hotkey settings again.
@@ -219,8 +219,8 @@ Caddy/Nginx HTTPS, backups and deletion. Uploads and thumbnails live in
 ```bash
 pnpm typecheck && pnpm build
 cargo test --manifest-path src-tauri/Cargo.toml
-./src-tauri/target/debug/clipforge --doctor
-./src-tauri/target/debug/clipforge --selftest
+./src-tauri/target/debug/shmingus-clips --doctor
+./src-tauri/target/debug/shmingus-clips --selftest
 ```
 
 `--selftest` runs the real encoder/segment/remux path with a test pattern and

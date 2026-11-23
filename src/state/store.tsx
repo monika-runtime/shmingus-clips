@@ -153,9 +153,9 @@ function readRoute(): Route {
   return "dashboard";
 }
 
-const SETUP_KEY = "clipforge.setup-dismissed";
-const UPDATE_DISMISSED_KEY = "clipforge.update-dismissed";
-const ONBOARDING_KEY = "clipforge.onboarding-dismissed";
+const SETUP_KEY = "shmingus-clips.setup-dismissed";
+const UPDATE_DISMISSED_KEY = "shmingus-clips.update-dismissed";
+const ONBOARDING_KEY = "shmingus-clips.onboarding-dismissed";
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const desktop = isDesktop();
@@ -191,7 +191,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [environmentBusy, setEnvironmentBusy] = useState(false);
   const [setupDismissed, setSetupDismissed] = useState<boolean>(() => {
     try {
-      return window.sessionStorage.getItem(SETUP_KEY) === "1";
+      return (
+        (window.sessionStorage.getItem(SETUP_KEY) ??
+          window.sessionStorage.getItem("clipforge.setup-dismissed")) === "1"
+      );
     } catch {
       return false;
     }
@@ -199,7 +202,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(() => {
     try {
-      return window.localStorage.getItem(ONBOARDING_KEY) === "1";
+      return (
+        (window.localStorage.getItem(ONBOARDING_KEY) ??
+          window.localStorage.getItem("clipforge.onboarding-dismissed")) === "1"
+      );
     } catch {
       return false;
     }
@@ -296,7 +302,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (!active || !info) return;
           let dismissed = "";
           try {
-            dismissed = window.localStorage.getItem(UPDATE_DISMISSED_KEY) ?? "";
+            dismissed =
+              window.localStorage.getItem(UPDATE_DISMISSED_KEY) ??
+              window.localStorage.getItem("clipforge.update-dismissed") ??
+              "";
           } catch {
             // Storage unavailable: show the banner rather than hide the update.
           }

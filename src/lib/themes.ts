@@ -1,4 +1,4 @@
-export type AppTheme = "clipforge" | "violet" | "cyan" | "amber";
+export type AppTheme = "lime" | "violet" | "cyan" | "amber";
 
 export interface ThemeOption {
   id: AppTheme;
@@ -10,7 +10,7 @@ export interface ThemeOption {
 
 export const THEMES: ThemeOption[] = [
   {
-    id: "clipforge",
+    id: "lime",
     label: "Lime",
     description: "Lime on charcoal",
     swatch: ["#0b0d10", "#151a20", "#c6ff4a"],
@@ -35,25 +35,29 @@ export const THEMES: ThemeOption[] = [
   },
 ];
 
-const STORAGE_KEY = "clipforge.theme";
+const STORAGE_KEY = "shmingus-clips.theme";
+const LEGACY_KEY = "clipforge.theme";
 
 /** The theme saved on this device, or the default. */
 export function storedTheme(): AppTheme {
   try {
-    const value = localStorage.getItem(STORAGE_KEY);
+    const value =
+      localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_KEY);
+    // "clipforge" was the Lime preset's id before the rename.
+    if (value === "clipforge") return "lime";
     if (value && THEMES.some((theme) => theme.id === value)) {
       return value as AppTheme;
     }
   } catch {
     // Storage can be unavailable; the default theme still works.
   }
-  return "clipforge";
+  return "lime";
 }
 
 /** Apply a theme immediately and remember it for the next launch. */
 export function applyTheme(theme: AppTheme): void {
   const root = document.documentElement;
-  if (theme === "clipforge") {
+  if (theme === "lime") {
     delete root.dataset.appTheme;
   } else {
     root.dataset.appTheme = theme;

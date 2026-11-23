@@ -1,6 +1,6 @@
 //! Persistent record of the shares this app uploaded.
 //!
-//! The file lives at `~/.config/clipforge/shares.json` and is keyed by clip id.
+//! The file lives at `~/.config/shmingus-clips/shares.json` and is keyed by clip id.
 //! Each record keeps the public [`ShareInfo`] plus the secret the server issued
 //! for deleting the share and the server it lives on. A missing or corrupt file
 //! is treated as an empty store: sharing still works, and the next upload
@@ -38,7 +38,7 @@ pub struct ShareStore {
 }
 
 impl ShareStore {
-    /// The live store, backed by `~/.config/clipforge/shares.json`.
+    /// The live store, backed by `~/.config/shmingus-clips/shares.json`.
     pub fn load() -> Arc<Self> {
         Arc::new(Self::from_path(default_path()))
     }
@@ -159,7 +159,7 @@ mod tests {
 
     fn temp_path(label: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
-            "clipforge-shares-{}-{label}-{}.json",
+            "shmingus-clips-shares-{}-{label}-{}.json",
             std::process::id(),
             uuid::Uuid::new_v4()
         ))

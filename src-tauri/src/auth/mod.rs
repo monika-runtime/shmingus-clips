@@ -3,7 +3,7 @@
 //! The desktop app is a public OAuth2/OIDC client: it runs the authorization
 //! code flow with PKCE (S256) in the user's system browser, receives the code
 //! on a loopback redirect (`http://127.0.0.1:47823/callback`), and keeps the
-//! resulting tokens in `~/.config/clipforge/auth.json` (mode 0600). Only the
+//! resulting tokens in `~/.config/shmingus-clips/auth.json` (mode 0600). Only the
 //! access token matters to the rest of the app - [`access_token`] hands it to
 //! uploads and refreshes it in the background when it is close to expiry.
 //!

@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn tail_and_buffered_seconds() {
-        let dir = std::env::temp_dir().join(format!("clipforge-ring-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("shmingus-clips-ring-{}", uuid::Uuid::new_v4()));
         let ring = SegmentRing::new(&dir);
         ring.prepare().unwrap();
         for index in 0..10 {

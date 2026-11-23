@@ -34,6 +34,7 @@ use crate::state::AppState;
 /// before anything touches GStreamer (including `--doctor` and `--selftest`).
 pub fn prepare_runtime_environment() {
     init_logging();
+    crate::settings::migrate_legacy_dirs();
     runtime::prepare();
 }
 

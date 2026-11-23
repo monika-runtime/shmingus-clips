@@ -882,7 +882,7 @@ export function SettingsScreen() {
                 </div>
                 <div className="usage__item">
                   <span className="micro-label">Exports</span>
-                  <span className="usage__value">Clipforge/Exports</span>
+                  <span className="usage__value">Shmingus Clips/Exports</span>
                 </div>
               </div>
               <Alert tone="info">
