@@ -201,34 +201,16 @@ URL, not `localhost` or plain HTTP.
 **Uploads are authenticated with Authentik.** The service is provisioned with
 the public OIDC client `Clips` on `https://auth.shmingus.net`; set
 `SHARE_AUTHENTIK_ISSUER=https://auth.shmingus.net/application/o/clips/` and
-`SHARE_AUTHENTIK_CLIENT_ID=3b3qlXdl8ZXav4OGMITMnApAzoU8hNNBeQqSqrCZ` (optionally
-`SHARE_AUTHENTIK_REQUIRED_GROUP=clips-users`) and only members of that group can
-upload. In Shmingus Clips use **Settings → Sharing → Sign in with Authentik**; the
+`SHARE_AUTHENTIK_CLIENT_ID=` (optionally `SHARE_AUTHENTIK_REQUIRED_GROUP=clips-users`)
+and only members of that group can upload.
+In Shmingus Clips use **Settings → Sharing → Sign in with Authentik**; the
 system browser handles the login (authorization code + PKCE, no password in the
 app) and uploads carry the resulting access token. Viewing share links never
 requires an account.
 
-Two fallbacks exist: `SHARE_UPLOAD_TOKEN` for a static token, and no auth at
-all when neither is configured (development only - anyone who can reach the
-server can then upload). Per-IP rate limiting and a 512 MB upload cap are built
-in either way.
-
 The service's README covers every environment variable, the Docker image,
 Caddy/Nginx HTTPS, backups and deletion. Uploads and thumbnails live in
 `SHARE_DATA_DIR`; the SQLite database is in the same directory.
-
-## Troubleshooting
-
-**The screen-share dialog names another app (for example “Hangar AI”).** KDE
-attributes a portal request to the process that launched the app. When Shmingus Clips
-is started by an agent harness, terminal multiplexer or similar parent, the
-dialog can carry that parent's name. Launch Shmingus Clips directly (desktop entry,
-packaged binary, or a plain terminal) and the prompt names Shmingus Clips.
-
-**The player says the media file could not be loaded.** Confirm the clip still
-exists at the path shown in the player; Shmingus Clips serves clips over a loopback
-HTTP server (`127.0.0.1`) because WebKitGTK's media stack cannot read `asset://`
-URLs. A firewall blocking loopback would break playback.
 
 ## Verification
 
