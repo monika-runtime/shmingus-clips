@@ -782,6 +782,12 @@ export function SettingsScreen() {
                 </div>
               )}
               <Switch
+                label="Compatibility rendering"
+                description="Draw the interface without GPU acceleration. Use this if the window crashes right after opening on NVIDIA Wayland. Takes effect on the next launch; if it then refuses to open, launch once with --no-software-rendering to turn it back off."
+                checked={draft.softwareRendering}
+                onChange={(next) => patch({ softwareRendering: next })}
+              />
+              <Switch
                 label="Even out the microphone level (experimental)"
                 description="At save time, lift a quiet microphone toward the game audio in the mixed track. The separate microphone track stays untouched."
                 checked={draft.audio.micAutoGain}

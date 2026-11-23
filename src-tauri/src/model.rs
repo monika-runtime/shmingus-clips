@@ -110,6 +110,9 @@ pub struct Settings {
     pub share_base_url: String,
     /// Optional upload token (the service can also run without auth).
     pub share_token: Option<String>,
+    /// Compatibility: draw with software rendering. Works around WebKitGTK's
+    /// DMA-BUF crash on some NVIDIA Wayland setups, at the cost of smoothness.
+    pub software_rendering: bool,
     /// Downscale captures wider than this to keep files small. `0` = native.
     pub max_width: u32,
 }
@@ -135,6 +138,7 @@ impl Default for Settings {
             clip_sound: true,
             share_base_url: "https://clips.shmingus.net".into(),
             share_token: None,
+            software_rendering: false,
             max_width: 1920,
         }
     }

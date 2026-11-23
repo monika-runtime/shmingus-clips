@@ -44,35 +44,22 @@ pub fn prepare() {
 // WebKit on NVIDIA Wayland
 // ---------------------------------------------------------------------------
 
-/// WebKitGTK's DMA-BUF renderer does not survive the proprietary NVIDIA
-/// driver on Wayland: the compositor drops the connection and the app dies with
-/// `Gdk-Message: Error 71 (Protocol error) dispatching to Wayland display`
-/// moments after the window appears. Fall back to WebKit's other renderer path.
+/// WebKitGTK's DMA-BUF renderer does not survive the proprietary NVIDIA driver
+/// on some Wayland setups: the compositor drops the connection and the app dies
+/// with `Gdk-Message: Error 71 (Protocol error) dispatching to Wayland display`
+/// moments after the window appears. Turning the renderer off is the fix, but
+/// it costs GPU acceleration for every frame, so it is opt-in rather than
+/// applied to every NVIDIA machine.
 fn fix_webkit_renderer() {
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_some() {
         return;
     }
-    if std::env::var_os("WAYLAND_DISPLAY").is_none() || !has_nvidia_gpu() {
+    if !crate::settings::software_rendering_requested() {
         return;
     }
     // SAFETY: called once from main before any thread is spawned.
     unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
-    log::info!("AppImage runtime: NVIDIA on Wayland, disabling WebKit's DMA-BUF renderer");
-}
-
-fn has_nvidia_gpu() -> bool {
-    let Ok(entries) = std::fs::read_dir("/sys/class/drm") else {
-        return false;
-    };
-    entries.flatten().any(|entry| {
-        let name = entry.file_name();
-        if !name.to_string_lossy().starts_with("card") {
-            return false;
-        }
-        std::fs::read_to_string(entry.path().join("device/vendor"))
-            .map(|vendor| vendor.trim().eq_ignore_ascii_case("0x10de"))
-            .unwrap_or(false)
-    })
+    log::info!("AppImage runtime: software rendering requested, disabling WebKit's DMA-BUF renderer");
 }
 
 /// The bundle ships no Python, but a host GStreamer plugin can start the

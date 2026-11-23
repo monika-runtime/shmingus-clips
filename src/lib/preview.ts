@@ -126,6 +126,7 @@ let settings: Settings = {
   clipSound: true,
   shareBaseUrl: "https://clips.shmingus.net",
   shareToken: null,
+  softwareRendering: false,
   maxWidth: 2560,
 };
 

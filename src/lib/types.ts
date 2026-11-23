@@ -48,6 +48,8 @@ export interface Settings {
   shareBaseUrl: string;
   /** Optional upload token for the share service. */
   shareToken: string | null;
+  /** Compatibility: draw the interface with software rendering. */
+  softwareRendering: boolean;
   maxWidth: number;
 }
 

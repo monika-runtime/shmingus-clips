@@ -106,6 +106,38 @@ fn migrate_dir(old: &Path, new: &Path) {
     }
 }
 
+/// Whether the interface must be drawn without GPU acceleration. Read before
+/// the webview starts, from the settings file (no store yet) or the
+/// `SHMINGUS_CLIPS_SOFTWARE_RENDERING` environment override.
+pub fn software_rendering_requested() -> bool {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let env = std::env::var("SHMINGUS_CLIPS_SOFTWARE_RENDERING").ok();
+    let path = config_dir().join("settings.json");
+    let stored = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Settings>(&raw).ok())
+        .map(|settings| settings.software_rendering)
+        .unwrap_or(false);
+    render_choice(&args, env.as_deref(), stored)
+}
+
+/// Flags beat the environment, which beats the saved setting. The flags exist
+/// so a bad choice can always be undone from a terminal, even when the window
+/// never appears.
+fn render_choice(args: &[String], env: Option<&str>, stored: bool) -> bool {
+    if args.iter().any(|arg| arg == "--no-software-rendering") {
+        return false;
+    }
+    if args.iter().any(|arg| arg == "--software-rendering") {
+        return true;
+    }
+    if let Some(value) = env {
+        let value = value.trim().to_ascii_lowercase();
+        return !["0", "false", "off", "no"].contains(&value.as_str());
+    }
+    stored
+}
+
 pub fn config_dir() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
@@ -127,6 +159,20 @@ pub fn ensure_dir(path: impl AsRef<Path>) -> Result<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn render_choice_prefers_flags_then_environment_then_settings() {
+        let none: Vec<String> = Vec::new();
+        assert!(super::render_choice(&none, None, true));
+        assert!(!super::render_choice(&none, None, false));
+        assert!(super::render_choice(&none, Some("1"), false));
+        assert!(!super::render_choice(&none, Some("0"), true));
+        assert!(!super::render_choice(&none, Some("false"), true));
+        let off = vec!["--no-software-rendering".to_string()];
+        assert!(!super::render_choice(&off, Some("1"), true));
+        let on = vec!["--software-rendering".to_string()];
+        assert!(super::render_choice(&on, Some("0"), false));
+    }
 
     #[test]
     fn auto_start_on_game_defaults_to_true() {
