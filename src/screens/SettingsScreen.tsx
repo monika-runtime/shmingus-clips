@@ -351,7 +351,7 @@ export function SettingsScreen() {
       if (status.signedIn) {
         pushToast(
           "success",
-          `Signed in as ${status.name ?? status.sub ?? "your Authentik account"}.`,
+          `Signed in as ${status.name ?? status.sub ?? "your Shmingus account"}.`,
         );
       } else {
         setAuthError("Sign-in did not finish. Try again.");
@@ -380,7 +380,7 @@ export function SettingsScreen() {
           expiresAt: null,
         },
       );
-      pushToast("success", "Signed out of Authentik.");
+      pushToast("success", "Signed out of your Shmingus account.");
     } catch (error) {
       setAuthError(errorMessage(error));
     } finally {
@@ -761,7 +761,7 @@ export function SettingsScreen() {
               <Panel
                 label="Sharing"
                 title="Account"
-                description="Uploads are authenticated with your Authentik account. Sign in once on this computer; your password is only ever entered in the browser."
+                description="Uploads use your Shmingus account. Sign in once on this computer; your password is only ever entered in the browser."
               >
                 {auth === null && authLoading ? (
                   <div className="account-card account-card--muted" aria-busy="true">
@@ -790,8 +790,8 @@ export function SettingsScreen() {
                         <p className="account-card__email">{auth.email}</p>
                       )}
                       <p className="account-card__meta">
-                        Signed in with Authentik. Clip links stay public to
-                        anyone who has them.
+                        Signed in with your Shmingus account. Clip links stay
+                        public to anyone who has them.
                       </p>
                       {authError && (
                         <p className="account-card__error" role="alert">
@@ -817,9 +817,8 @@ export function SettingsScreen() {
                     <div className="account-card__body">
                       <p className="account-card__name">Not signed in</p>
                       <p className="account-card__meta">
-                        Signing in opens your browser. Shmingus Clips never sees your
-                        password - the browser hands back a short-lived code
-                        (PKCE).
+                        Signing in opens your browser. Shmingus Clips never sees
+                        your password.
                       </p>
                       {authBusy && (
                         <p className="account-card__note" role="status">
@@ -844,7 +843,7 @@ export function SettingsScreen() {
                     >
                       {authBusy
                         ? "Waiting for browser…"
-                        : "Sign in with Authentik"}
+                        : "Sign in with your Shmingus account"}
                     </Button>
                   </div>
                 )}
@@ -882,28 +881,6 @@ export function SettingsScreen() {
                   />
                 </Field>
 
-                <Field
-                  label="Upload token"
-                  hint="Only for servers that still use a static token. With Authentik sign-in, leave this empty."
-                >
-                  <Input
-                    type="password"
-                    autoComplete="off"
-                    aria-label="Upload token"
-                    value={draft.shareToken ?? ""}
-                    placeholder="No token"
-                    onChange={(event) => {
-                      patch({
-                        shareToken: event.target.value
-                          ? event.target.value
-                          : null,
-                      });
-                      setShareStatus(null);
-                      setShareTestError(null);
-                    }}
-                  />
-                </Field>
-
                 {shareStatus && (
                   <Alert
                     tone={shareStatus.ok ? "success" : "warn"}
@@ -932,17 +909,13 @@ export function SettingsScreen() {
               >
                 <ul className="share-help">
                   <li>
-                    Uploads are authenticated with your Authentik account.
+                    Uploads use your Shmingus account.
                     Viewing a link never needs an account - anyone with the link
                     can watch the clip.
                   </li>
                   <li>
                     Links are permanent until you remove the share. The clip
                     itself stays in your library either way.
-                  </li>
-                  <li>
-                    Older servers can still use a static Upload token instead of
-                    Authentik sign-in.
                   </li>
                   <li>
                     Discord only shows a rich embed when the link is a public

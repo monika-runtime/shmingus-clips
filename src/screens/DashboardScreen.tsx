@@ -1,4 +1,5 @@
 import { Clapperboard } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { OnboardingCard } from "../components/OnboardingCard";
 import { RecorderCard } from "../components/RecorderCard";
@@ -8,7 +9,8 @@ import { Alert } from "../components/ui/Alert";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { PageHeader } from "../components/ui/PageHeader";
-import type { RecorderState } from "../lib/types";
+import { backend } from "../lib/bridge";
+import type { AuthStatus, RecorderState } from "../lib/types";
 import { useApp } from "../state/store";
 
 const STATUS_PILL: Record<
@@ -23,10 +25,39 @@ const STATUS_PILL: Record<
 };
 
 export function DashboardScreen() {
-  const { clipsError, refreshClips, settingsError, status } = useApp();
+  const {
+    clipsError,
+    refreshClips,
+    settings,
+    settingsError,
+    status,
+    openSettings,
+  } = useApp();
+  const [auth, setAuth] = useState<AuthStatus | null>(null);
 
   const pill = STATUS_PILL[status.state];
   const recording = status.state !== "off" && status.state !== "error";
+  const sharingEnabled = Boolean(settings?.shareBaseUrl.trim());
+  // `auth` stays null until the backend answers, so the warning never flashes
+  // while the status is still loading.
+  const signedOut = sharingEnabled && auth !== null && !auth.signedIn;
+
+  useEffect(() => {
+    if (!sharingEnabled) return;
+    let alive = true;
+    backend
+      .authStatus()
+      .then((next) => {
+        if (alive) setAuth(next);
+      })
+      .catch(() => {
+        // An unreachable auth backend is not proof of being signed out; the
+        // sharing screen reports the real error.
+      });
+    return () => {
+      alive = false;
+    };
+  }, [sharingEnabled]);
 
   return (
     <div className="page">
@@ -47,6 +78,26 @@ export function DashboardScreen() {
       />
 
       <RecorderCard />
+
+      {signedOut && (
+        <Alert
+          tone="warn"
+          title="Signed out of your Shmingus account"
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => openSettings("sharing")}
+            >
+              Open sharing settings
+            </Button>
+          }
+        >
+          Sharing is on, so clips can be uploaded to{" "}
+          {settings?.shareBaseUrl.trim()}, but no account is signed in. Uploads
+          are refused until you sign in.
+        </Alert>
+      )}
 
       <OnboardingCard />
 

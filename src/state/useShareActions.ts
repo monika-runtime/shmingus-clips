@@ -77,7 +77,7 @@ export function useShareActions() {
         if (auth && !auth.signedIn) {
           pushToast(
             "info",
-            "Opening your browser to sign in with Authentik…",
+            "Opening your browser to sign in to your Shmingus account…",
           );
           try {
             auth = await backend.authLogin();
@@ -93,7 +93,7 @@ export function useShareActions() {
           }
           pushToast(
             "success",
-            `Signed in as ${auth.name ?? auth.sub ?? "your Authentik account"}.`,
+            `Signed in as ${auth.name ?? auth.sub ?? "your Shmingus account"}.`,
           );
         }
       }

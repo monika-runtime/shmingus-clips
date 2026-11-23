@@ -1,6 +1,6 @@
 [package]
 name = "clipforge"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local game clip recorder for Linux"
 authors = ["maf"]
 edition = "2024"

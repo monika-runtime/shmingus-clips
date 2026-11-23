@@ -89,7 +89,7 @@ export function ShareDialog({ clip, info, onClose }: ShareDialogProps) {
           {clip.title}
         </h2>
         <p className="modal__subtitle">
-          Uploaded with your Authentik account. Anyone with this link can watch
+          Uploaded with your Shmingus account. Anyone with this link can watch
           the clip until you remove it - no sign-in needed to view.
         </p>
       </header>
