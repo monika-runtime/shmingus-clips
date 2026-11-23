@@ -30,9 +30,79 @@ pub fn prepare() {
         return;
     }
 
+    prefer_host_libraries();
     fix_gstreamer();
     ensure_desktop_entry(&appimage);
     maybe_reexec_in_app_scope(&appimage);
+}
+
+// ---------------------------------------------------------------------------
+// Host vs bundled libraries
+// ---------------------------------------------------------------------------
+
+/// Library directories a host keeps its GStreamer stack in.
+const HOST_LIB_DIRS: [&str; 4] = [
+    "/usr/lib/x86_64-linux-gnu",
+    "/usr/lib64",
+    "/usr/lib",
+    "/usr/lib/i386-linux-gnu",
+];
+
+/// Set once the process already runs with the host libraries first, so the
+/// re-exec cannot loop.
+const HOST_LIBS_MARKER: &str = "SHMINGUS_CLIPS_HOST_LIBS";
+
+/// Put the host's GStreamer and GLib ahead of the copies bundled in the
+/// AppImage.
+///
+/// The bundle carries the build machine's GStreamer and GLib (1.20 / 2.72 on
+/// Ubuntu 22.04), while the plugins come from the host. A host plugin built
+/// against a newer GLib then fails to load - on Arch the scanner reports
+/// `undefined symbol: g_once_init_leave_pointer` - and the app reports missing
+/// elements such as the encoders. Running the whole stack from the host keeps
+/// core, libraries and plugins on one version; the bundled copies stay behind
+/// it as a fallback for libraries the host does not have.
+fn prefer_host_libraries() {
+    if std::env::var_os(HOST_LIBS_MARKER).is_some() {
+        return;
+    }
+
+    let host: Vec<String> = HOST_LIB_DIRS
+        .iter()
+        .filter(|dir| Path::new(dir).join("libgstreamer-1.0.so.0").is_file())
+        .map(|dir| (*dir).to_string())
+        .collect();
+    if host.is_empty() {
+        log::warn!(
+            "AppImage runtime: no host GStreamer library found; keeping the bundled one"
+        );
+        return;
+    }
+
+    let current = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+    let mut dirs = host.clone();
+    dirs.extend(
+        current
+            .split(':')
+            .filter(|entry| !entry.is_empty() && !host.iter().any(|dir| dir == entry))
+            .map(str::to_string),
+    );
+
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    log::info!(
+        "AppImage runtime: preferring host libraries from {}",
+        host.join(":")
+    );
+
+    use std::os::unix::process::CommandExt;
+    let err = Command::new(&exe)
+        .args(std::env::args_os().skip(1))
+        .env("LD_LIBRARY_PATH", dirs.join(":"))
+        .env(HOST_LIBS_MARKER, "1")
+        .exec();
+    log::warn!("could not re-exec with the host libraries ({err}); keeping the bundled ones");
 }
 
 /// True when this process really runs from Shmingus Clips' own AppImage: either
@@ -209,11 +279,17 @@ fn maybe_reexec_in_app_scope(appimage: &Path) {
     let unit = format!("app-{APP_ID}-{}.scope", std::process::id());
     log::info!("AppImage runtime: re-exec inside {unit}");
 
+    // Launch the inner binary rather than the AppImage: the AppRun wrapper
+    // prepends the bundle's library directory, which would undo the host-first
+    // order set by `prefer_host_libraries`. Portal identity comes from the
+    // systemd scope name and the desktop entry, not from the executable path.
+    let exe = std::env::current_exe().unwrap_or_else(|_| appimage.to_path_buf());
+
     let status = Command::new(systemd_run)
         .args(["--user", "--scope", "--quiet", "--collect"])
         .arg(format!("--unit={unit}"))
         .arg("--")
-        .arg(appimage)
+        .arg(exe)
         .args(std::env::args().skip(1))
         .status();
 
