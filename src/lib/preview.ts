@@ -522,6 +522,18 @@ export const previewBackend = {
     return { rmsDb: -26.5 + Math.sin(Date.now() / 700) * 8, peakDb: -12 };
   },
 
+  async startMicMonitor(): Promise<void> {},
+  async stopMicMonitor(): Promise<void> {},
+
+  onMicLevel(cb: (level: MicLevel) => void): Promise<() => void> {
+    let level = -22;
+    const timer = window.setInterval(() => {
+      level = Math.max(-55, Math.min(-4, level + (Math.random() - 0.5) * 10));
+      cb({ rmsDb: level - 4, peakDb: level });
+    }, 120);
+    return Promise.resolve(() => window.clearInterval(timer));
+  },
+
   async getAudioDevices(): Promise<AudioDevice[]> {
     await wait(240);
     return clone(audioDevices);

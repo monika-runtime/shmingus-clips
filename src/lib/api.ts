@@ -29,6 +29,8 @@ export const api = {
   runSelftest: () => invoke<SelfTestReport>("run_selftest"),
   getAudioDevices: () => invoke<AudioDevice[]>("get_audio_devices"),
   micLevel: () => invoke<MicLevel | null>("mic_level"),
+  startMicMonitor: () => invoke<void>("start_mic_level_monitor"),
+  stopMicMonitor: () => invoke<void>("stop_mic_level_monitor"),
 
   getRecorderStatus: () => invoke<RecorderStatus>("get_recorder_status"),
   startBuffer: () => invoke<RecorderStatus>("start_buffer"),
@@ -76,6 +78,10 @@ export const api = {
 /** Local file path -> URL playable in <video>/<img> through the asset protocol. */
 export function assetUrl(path: string): string {
   return convertFileSrc(path);
+}
+
+export function onMicLevel(cb: (level: MicLevel) => void): Promise<UnlistenFn> {
+  return listen<MicLevel>("mic-level", (e) => cb(e.payload));
 }
 
 export function onRecorderStatus(cb: (s: RecorderStatus) => void): Promise<UnlistenFn> {

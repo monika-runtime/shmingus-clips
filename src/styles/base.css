@@ -4,10 +4,13 @@
   box-sizing: border-box;
 }
 
-html,
+html {
+  height: 100%;
+}
+
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
@@ -20,7 +23,7 @@ body {
   background-image:
     radial-gradient(1100px 560px at 86% -12%, color-mix(in srgb, var(--accent) 5.5%, transparent), transparent 62%),
     radial-gradient(900px 520px at -6% 108%, rgba(255, 138, 61, 0.04), transparent 60%);
-  overflow: hidden;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

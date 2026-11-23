@@ -1,7 +1,9 @@
+import type { UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 
-import { api, assetUrl } from "./api";
+import { api, assetUrl, onMicLevel } from "./api";
 import { previewBackend } from "./preview";
+import type { MicLevel } from "./types";
 
 /**
  * The frontend talks to the backend through this bridge. Inside Tauri every
@@ -37,6 +39,10 @@ export const backend = {
   getAudioDevices: () =>
     call(api.getAudioDevices, previewBackend.getAudioDevices),
   micLevel: () => call(api.micLevel, previewBackend.micLevel),
+  startMicMonitor: () => call(api.startMicMonitor, previewBackend.startMicMonitor),
+  stopMicMonitor: () => call(api.stopMicMonitor, previewBackend.stopMicMonitor),
+  onMicLevel: (cb: (level: MicLevel) => void): Promise<UnlistenFn> =>
+    isDesktop() ? onMicLevel(cb) : previewBackend.onMicLevel(cb),
 
   getRecorderStatus: () =>
     call(api.getRecorderStatus, previewBackend.getRecorderStatus),

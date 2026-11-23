@@ -262,8 +262,7 @@ export function SettingsScreen() {
     };
   }, []);
 
-  // Sample the microphone while the Audio section is open, so a quiet or
-  // missing input is visible before recording instead of after.
+  // Stream microphone levels while the Audio section is open.
   useEffect(() => {
     if (!desktop || settingsSection !== "audio" || !settings?.audio.micEnabled) {
       setMicLevel(null);
@@ -271,26 +270,31 @@ export function SettingsScreen() {
       return;
     }
     let active = true;
+    let unlisten: (() => void) | null = null;
+    setMicLevel(null);
     setMicLevelChecked(false);
-    const poll = () => {
-      backend
-        .micLevel()
-        .then((level) => {
-          if (!active) return;
-          setMicLevel(level);
-          setMicLevelChecked(true);
-        })
-        .catch(() => {
-          if (!active) return;
-          setMicLevel(null);
-          setMicLevelChecked(true);
-        });
-    };
-    poll();
-    const timer = window.setInterval(poll, 1200);
+    void backend.startMicMonitor().catch(() => {});
+    const silence = window.setTimeout(() => {
+      if (active) setMicLevelChecked(true);
+    }, 1500);
+    backend
+      .onMicLevel((level) => {
+        if (!active) return;
+        setMicLevel(level);
+        setMicLevelChecked(true);
+      })
+      .then((stop) => {
+        if (active) unlisten = stop;
+        else stop();
+      })
+      .catch(() => {
+        // Event delivery is unavailable; the meter keeps saying "measuring".
+      });
     return () => {
       active = false;
-      window.clearInterval(timer);
+      window.clearTimeout(silence);
+      unlisten?.();
+      void backend.stopMicMonitor().catch(() => {});
     };
   }, [desktop, settingsSection, settings?.audio.micEnabled, settings?.audio.micDevice]);
 

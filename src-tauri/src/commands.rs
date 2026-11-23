@@ -5,7 +5,9 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use tauri::{AppHandle, State};
+use std::sync::Mutex;
+
+use tauri::{AppHandle, Emitter, State};
 
 use crate::error::Result;
 use crate::model::{
@@ -67,6 +69,37 @@ pub async fn check_environment() -> Result<EnvironmentReport> {
 #[tauri::command]
 pub async fn run_selftest() -> Result<SelfTestReport> {
     crate::capture::selftest().await
+}
+
+/// The live microphone meter, at most one at a time.
+static MIC_MONITOR: Mutex<Option<crate::capture::audio::MicMonitor>> = Mutex::new(None);
+
+/// Start streaming microphone levels as `mic-level` events. Safe to call
+/// repeatedly: the previous monitor is stopped first.
+#[tauri::command]
+pub async fn start_mic_level_monitor(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
+    let settings = state.settings.get();
+    let mut slot = MIC_MONITOR.lock().expect("mic monitor poisoned");
+    if let Some(monitor) = slot.take() {
+        monitor.stop();
+    }
+    if !settings.audio.mic_enabled {
+        return Ok(());
+    }
+    let handle = app.clone();
+    *slot = crate::capture::audio::start_monitor(settings.audio.mic_device, move |level| {
+        let _ = handle.emit("mic-level", level);
+    });
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn stop_mic_level_monitor() -> Result<()> {
+    let mut slot = MIC_MONITOR.lock().expect("mic monitor poisoned");
+    if let Some(monitor) = slot.take() {
+        monitor.stop();
+    }
+    Ok(())
 }
 
 #[tauri::command]

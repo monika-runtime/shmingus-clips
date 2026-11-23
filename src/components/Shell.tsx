@@ -22,7 +22,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    window.scrollTo({ top: 0, behavior: "auto" });
   }, [route, settingsSection]);
 
   return (
