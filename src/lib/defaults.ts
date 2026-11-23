@@ -32,7 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   launchAtLogin: false,
   notifyOnClip: true,
   clipSound: true,
-  shareBaseUrl: "",
+  shareBaseUrl: "https://clips.shmingus.net",
   shareToken: null,
   maxWidth: 1920,
 };

@@ -129,7 +129,7 @@ impl Default for Settings {
             launch_at_login: false,
             notify_on_clip: true,
             clip_sound: true,
-            share_base_url: String::new(),
+            share_base_url: "https://clips.shmingus.net".into(),
             share_token: None,
             max_width: 1920,
         }

@@ -122,7 +122,7 @@ let settings: Settings = {
   launchAtLogin: false,
   notifyOnClip: true,
   clipSound: true,
-  shareBaseUrl: "",
+  shareBaseUrl: "https://clips.shmingus.net",
   shareToken: null,
   maxWidth: 2560,
 };
