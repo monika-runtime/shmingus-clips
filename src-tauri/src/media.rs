@@ -174,6 +174,75 @@ pub fn remux_mp4(input: &Path, out: &Path, start_ms: u64, duration_ms: u64) -> R
     Ok(())
 }
 
+/// Remux a freshly assembled clip and put a desktop + microphone mix first, so
+/// ordinary players - which only play the first audio track - hear both. The
+/// isolated tracks follow it for editing. A clip with any other number of
+/// audio tracks is copied unchanged.
+pub fn remux_clip_mp4(
+    input: &Path,
+    out: &Path,
+    start_ms: u64,
+    duration_ms: u64,
+    audio_streams: usize,
+) -> Result<()> {
+    if audio_streams != 2 {
+        return remux_mp4(input, out, start_ms, duration_ms);
+    }
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let start = format!("{:.3}", start_ms as f64 / 1000.0);
+    let duration = format!("{:.3}", duration_ms as f64 / 1000.0);
+
+    let mut args: Vec<&std::ffi::OsStr> = vec!["-y".as_ref(), "-ss".as_ref(), start.as_ref()];
+    if duration_ms > 0 {
+        args.push("-t".as_ref());
+        args.push(duration.as_ref());
+    }
+    args.extend_from_slice(&[
+        "-i".as_ref(),
+        input.as_os_str(),
+        // normalize=0 keeps the recorded levels; the limiter only stops the sum
+        // from clipping when game audio and voice peak together.
+        "-filter_complex".as_ref(),
+        "[0:a:0][0:a:1]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.95:level=false[mix]"
+            .as_ref(),
+        "-map".as_ref(),
+        "0:v:0".as_ref(),
+        "-map".as_ref(),
+        "[mix]".as_ref(),
+        "-map".as_ref(),
+        "0:a:0".as_ref(),
+        "-map".as_ref(),
+        "0:a:1".as_ref(),
+        "-c:v".as_ref(),
+        "copy".as_ref(),
+        "-c:a:0".as_ref(),
+        "aac".as_ref(),
+        "-b:a:0".as_ref(),
+        "192k".as_ref(),
+        "-c:a:1".as_ref(),
+        "copy".as_ref(),
+        "-c:a:2".as_ref(),
+        "copy".as_ref(),
+        "-metadata:s:a:0".as_ref(),
+        "handler_name=Mixed audio".as_ref(),
+        "-metadata:s:a:1".as_ref(),
+        "handler_name=Desktop audio".as_ref(),
+        "-metadata:s:a:2".as_ref(),
+        "handler_name=Microphone".as_ref(),
+        "-movflags".as_ref(),
+        "+faststart".as_ref(),
+        "-avoid_negative_ts".as_ref(),
+        "make_zero".as_ref(),
+        out.as_os_str(),
+    ]);
+
+    run("ffmpeg", &args)?;
+    Ok(())
+}
+
 /// Copy a finished clip somewhere else, keeping every stream intact.
 pub fn copy_clip(input: &Path, out: &Path) -> Result<()> {
     if let Some(parent) = out.parent() {

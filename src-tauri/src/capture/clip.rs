@@ -148,7 +148,13 @@ pub fn assemble(
         } else {
             requested_ms.min(joined.duration_ms)
         };
-        media::remux_mp4(&concat_path, out_mp4, 0, duration_ms)?;
+        media::remux_clip_mp4(
+            &concat_path,
+            out_mp4,
+            0,
+            duration_ms,
+            joined.audio_streams,
+        )?;
         let _ = std::fs::remove_file(&concat_path);
 
         let probe = media::probe(out_mp4)?;

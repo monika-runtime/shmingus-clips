@@ -859,12 +859,12 @@ async fn run_selftest(
             duration_ok,
             format!("{} ms (expected 5000-7000 ms)", probe.duration_ms),
         );
-        let audio_ok = probe.audio_streams == 2;
+        let audio_ok = probe.audio_streams == 3;
         report.step(
             "audio-tracks",
             audio_ok,
             format!(
-                "{} audio streams (expected 2 separate tracks)",
+                "{} audio streams (expected 3: mix, desktop, microphone)",
                 probe.audio_streams
             ),
         );

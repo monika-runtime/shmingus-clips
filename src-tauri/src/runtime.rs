@@ -34,6 +34,7 @@ pub fn prepare() {
     drop_bundled_python_env();
     prefer_host_libraries();
     fix_gstreamer();
+    install_icons();
     ensure_desktop_entry(&appimage);
     maybe_reexec_in_app_scope(&appimage);
 }
@@ -254,13 +255,21 @@ fn ensure_desktop_entry(appimage: &Path) {
     };
     let applications = data_home.join("applications");
     let target = applications.join(format!("{APP_ID}.desktop"));
+    let exec = appimage.to_string_lossy();
 
     if target.is_file() {
         match std::fs::read_to_string(&target) {
-            // Ours: keep it in step with the AppImage's current location.
-            Ok(existing) if existing.contains(DESKTOP_MARKER) => {}
+            // Ours: leave it alone only while it still points at this AppImage
+            // (a newer download or a moved file must refresh the entry).
+            Ok(existing)
+                if existing.contains(DESKTOP_MARKER)
+                    && existing.contains(&format!("{DESKTOP_MARKER}{exec}")) =>
+            {
+                return;
+            }
             // Someone else's entry: do not touch it.
-            Ok(_) => return,
+            Ok(existing) if !existing.contains(DESKTOP_MARKER) => return,
+            Ok(_) => {}
             Err(_) => return,
         }
     }
@@ -270,7 +279,6 @@ fn ensure_desktop_entry(appimage: &Path) {
         return;
     }
 
-    let exec = appimage.to_string_lossy();
     let quoted = format!("\"{}\"", exec.replace('"', "\\\""));
     let entry = format!(
         "[Desktop Entry]\n\
@@ -291,6 +299,49 @@ fn ensure_desktop_entry(appimage: &Path) {
         return;
     }
     log::info!("AppImage runtime: registered {}", target.display());
+}
+
+/// Copy the bundle's launcher icons into the user's icon theme, so Plasma can
+/// resolve the desktop entry's `Icon=clipforge` after the AppImage unmounts.
+/// Without this the launcher and taskbar fall back to a generic icon.
+fn install_icons() {
+    let Some(appdir) = app_dir() else {
+        return;
+    };
+    let Some(data_home) = user_data_home() else {
+        return;
+    };
+    let source_root = appdir.join("usr/share/icons/hicolor");
+    let mut installed = 0;
+    for size in ["16x16", "32x32", "64x64", "128x128", "256x256", "256x256@2"] {
+        let source = source_root
+            .join(size)
+            .join("apps")
+            .join(format!("{APP_ID}.png"));
+        if !source.is_file() {
+            continue;
+        }
+        let target_dir = data_home.join("icons/hicolor").join(size).join("apps");
+        if std::fs::create_dir_all(&target_dir).is_err() {
+            continue;
+        }
+        match std::fs::copy(&source, target_dir.join(format!("{APP_ID}.png"))) {
+            Ok(_) => installed += 1,
+            Err(err) => log::warn!("could not install the {size} app icon: {err}"),
+        }
+    }
+    if installed > 0 {
+        log::info!("AppImage runtime: installed {installed} launcher icon(s)");
+    }
+}
+
+/// The mounted AppImage root: `<appdir>/usr/bin/clipforge` is the binary.
+fn app_dir() -> Option<PathBuf> {
+    if let Some(dir) = std::env::var_os("APPDIR") {
+        return Some(PathBuf::from(dir));
+    }
+    let exe = std::env::current_exe().ok()?;
+    exe.parent()?.parent()?.parent().map(PathBuf::from)
 }
 
 fn system_desktop_entry_exists() -> bool {
