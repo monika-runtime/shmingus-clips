@@ -334,12 +334,18 @@ fn host_plugin_dir() -> Option<PathBuf> {
 // Portal identity
 // ---------------------------------------------------------------------------
 
-// The internal app id and desktop file name. Current builds use the Shmingus
-// Clips names; the Clipforge entry from before the rename is removed below.
-const APP_ID: &str = "shmingus-clips";
+// The internal app id and desktop file name. It must not contain a hyphen:
+// xdg-desktop-portal derives the app id from the systemd scope with
+// `app-(?:[[:alnum:]]+-)?(.+?)(?:-[[:alnum:]]*)\.scope`, so
+// `app-shmingus-clips-123.scope` would resolve to `clips` and the portal would
+// look for a desktop file that does not exist (no prompt, no hotkeys).
+const APP_ID: &str = "shmingus";
 const DESKTOP_MARKER: &str = "X-Shmingus-Clips-AppImage=";
-const LEGACY_APP_ID: &str = "clipforge";
-const LEGACY_DESKTOP_MARKER: &str = "X-Clipforge-AppImage=";
+/// Launcher entries left behind by earlier names, removed on sight.
+const LEGACY_ENTRIES: [(&str, &str); 2] = [
+    ("clipforge", "X-Clipforge-AppImage="),
+    ("shmingus-clips", "X-Shmingus-Clips-AppImage="),
+];
 
 /// Register `~/.local/share/applications/shmingus-clips.desktop` pointing at this
 /// AppImage. The portal needs a loadable desktop entry to accept the app id;
@@ -387,9 +393,9 @@ fn ensure_desktop_entry(appimage: &Path) {
          Name=Shmingus Clips\n\
          Comment=Instant game clips on Linux\n\
          Exec={quoted} %U\n\
-         Icon=shmingus-clips\n\
+         Icon={APP_ID}\n\
          Terminal=false\n\
-         StartupWMClass=shmingus-clips\n\
+         StartupWMClass={APP_ID}\n\
          Categories=AudioVideo;Video;\n\
          {DESKTOP_MARKER}{exec}\n"
     );
@@ -402,7 +408,7 @@ fn ensure_desktop_entry(appimage: &Path) {
 }
 
 /// Copy the bundle's launcher icons into the user's icon theme, so Plasma can
-/// resolve the desktop entry's `Icon=shmingus-clips` after the AppImage unmounts.
+/// resolve the desktop entry's `Icon=shmingus` after the AppImage unmounts.
 /// Without this the launcher and taskbar fall back to a generic icon.
 fn install_icons() {
     let Some(appdir) = app_dir() else {
@@ -414,13 +420,13 @@ fn install_icons() {
     let source_root = appdir.join("usr/share/icons/hicolor");
     let mut installed = 0;
     for size in ["16x16", "32x32", "64x64", "128x128", "256x256", "256x256@2"] {
-        let source = source_root
-            .join(size)
-            .join("apps")
-            .join(format!("{APP_ID}.png"));
-        if !source.is_file() {
+        let source = ["shmingus-clips.png", "shmingus.png", "Shmingus Clips.png"]
+            .iter()
+            .map(|name| source_root.join(size).join("apps").join(name))
+            .find(|path| path.is_file());
+        let Some(source) = source else {
             continue;
-        }
+        };
         let target_dir = data_home.join("icons/hicolor").join(size).join("apps");
         if std::fs::create_dir_all(&target_dir).is_err() {
             continue;
@@ -444,21 +450,21 @@ fn app_dir() -> Option<PathBuf> {
     exe.parent()?.parent()?.parent().map(PathBuf::from)
 }
 
-/// Drop the launcher entry written under the old Clipforge name. Only touches a
-/// file carrying our marker, never someone else's entry.
+/// Drop launcher entries written under earlier app ids. Only touches a file
+/// carrying our marker, never someone else's entry.
 fn remove_legacy_desktop_entry() {
     let Some(home) = user_data_home() else {
         return;
     };
-    let path = home
-        .join("applications")
-        .join(format!("{LEGACY_APP_ID}.desktop"));
-    let Ok(existing) = std::fs::read_to_string(&path) else {
-        return;
-    };
-    if existing.contains(LEGACY_DESKTOP_MARKER) {
-        let _ = std::fs::remove_file(&path);
-        log::info!("AppImage runtime: removed the old Clipforge launcher entry");
+    for (app_id, marker) in LEGACY_ENTRIES {
+        let path = home.join("applications").join(format!("{app_id}.desktop"));
+        let Ok(existing) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        if existing.contains(marker) {
+            let _ = std::fs::remove_file(&path);
+            log::info!("AppImage runtime: removed the old {app_id} launcher entry");
+        }
     }
 }
 
