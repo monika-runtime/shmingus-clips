@@ -86,10 +86,11 @@ function Editor({ clip }: { clip: Clip }) {
     typeof window === "undefined" ? 800 : window.innerHeight,
   );
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRefs = useRef(new Map<string, HTMLVideoElement>());
   const previewRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const ignoreUpdates = useRef(0);
 
   const offsets: number[] = [];
   let total = 0;
@@ -109,6 +110,17 @@ function Editor({ clip }: { clip: Clip }) {
   const activeIndex = indexAt(playhead);
   const active = plan.segments[activeIndex];
   const activeClip = clipById.get(active.clipId);
+  const previewClips = useMemo(() => {
+    const seen = new Set<string>();
+    const list: Clip[] = [];
+    for (const segment of plan.segments) {
+      if (seen.has(segment.clipId)) continue;
+      seen.add(segment.clipId);
+      const item = clipById.get(segment.clipId);
+      if (item) list.push(item);
+    }
+    return list;
+  }, [plan.segments, clipById]);
   const outputHeight =
     plan.aspect === "vertical" ? 1920 : plan.aspect === "square" ? 1080 : (activeClip?.height ?? 1080);
   const sourceAt = (segment: EditorSegment, atMs: number) =>
@@ -161,19 +173,45 @@ function Editor({ clip }: { clip: Clip }) {
   );
   const previewHeight = previewWidth / ratio;
 
+  const activeVideo = () =>
+    activeClip ? (videoRefs.current.get(activeClip.id) ?? null) : null;
+
   useEffect(() => {
-    const video = videoRef.current;
-    if (video) video.playbackRate = active.speed;
-  }, [active.speed, activeIndex]);
+    const video = activeVideo();
+    if (!video) return;
+    const target = activeSourceMs / 1000;
+    if (Math.abs(video.currentTime - target) > 0.25) video.currentTime = target;
+    video.playbackRate = active.speed;
+    for (const [id, element] of videoRefs.current) {
+      if (id !== activeClip?.id) element.pause();
+    }
+    if (playing && video.paused) void video.play().catch(() => setPlaying(false));
+    // activeSourceMs follows playhead; only segment changes should re-sync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, active.speed, activeClip?.id]);
+
+  useEffect(() => {
+    const nextSegment = plan.segments[activeIndex + 1];
+    if (!nextSegment || nextSegment.clipId === activeClip?.id) return;
+    const video = videoRefs.current.get(nextSegment.clipId);
+    if (!video) return;
+    const target = nextSegment.startMs / 1000;
+    if (Math.abs(video.currentTime - target) > 0.4) video.currentTime = target;
+    video.pause();
+  }, [activeIndex, plan.segments, activeClip?.id]);
 
   function seek(ms: number) {
     const next = clamp(ms, 0, total);
+    ignoreUpdates.current = performance.now() + 250;
     setPlayhead(next);
     const index = indexAt(next);
-    if (index === activeIndex && videoRef.current) {
+    if (index === activeIndex) {
+      const video = activeVideo();
       const segment = plan.segments[index];
-      const source = segment.startMs + (next - offsets[index]) * segment.speed;
-      videoRef.current.currentTime = clamp(source, segment.startMs, segment.endMs) / 1000;
+      if (video) {
+        const source = segment.startMs + (next - offsets[index]) * segment.speed;
+        video.currentTime = clamp(source, segment.startMs, segment.endMs) / 1000;
+      }
     }
   }
 
@@ -183,20 +221,27 @@ function Editor({ clip }: { clip: Clip }) {
     seek(((clientX - box.left) / box.width) * total);
   }
 
-  function onLoadedMetadata() {
-    const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = activeSourceMs / 1000;
-    video.playbackRate = active.speed;
-    if (playing) void video.play().catch(() => setPlaying(false));
+  function onLoadedMetadata(clipId: string, video: HTMLVideoElement) {
+    if (clipId === activeClip?.id) {
+      video.currentTime = activeSourceMs / 1000;
+      video.playbackRate = active.speed;
+      if (playing) void video.play().catch(() => setPlaying(false));
+    } else {
+      const nextSegment = plan.segments[activeIndex + 1];
+      if (nextSegment?.clipId === clipId) video.currentTime = nextSegment.startMs / 1000;
+    }
   }
 
-  function onTimeUpdate() {
-    const video = videoRef.current;
-    if (!video) return;
+  function onTimeUpdate(clipId: string, video: HTMLVideoElement) {
+    if (clipId !== activeClip?.id) return;
+    if (performance.now() < ignoreUpdates.current) return;
     const sourceMs = video.currentTime * 1000;
     if (sourceMs >= active.endMs - 15) {
       if (activeIndex + 1 < plan.segments.length) {
+        // Stop the old position from feeding the playhead while the next
+        // segment is sought; the effect below resumes playback.
+        ignoreUpdates.current = performance.now() + 300;
+        video.pause();
         setPlayhead(offsets[activeIndex + 1]);
       } else {
         video.pause();
@@ -361,20 +406,36 @@ function Editor({ clip }: { clip: Clip }) {
             ref={previewRef}
             style={{ width: previewWidth, height: previewHeight }}
           >
-            {activeClip ? (
-              <video
-                key={activeIndex}
-                ref={videoRef}
-                src={videoUrl(activeClip, mediaBase)}
-                controls
-                playsInline
-                onLoadedMetadata={onLoadedMetadata}
-                onTimeUpdate={onTimeUpdate}
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-                onEnded={() => setPlaying(false)}
-              />
-            ) : (
+            {previewClips.map((item) => {
+              const isActive = item.id === activeClip?.id;
+              return (
+                <video
+                  key={item.id}
+                  ref={(node) => {
+                    if (node) videoRefs.current.set(item.id, node);
+                    else videoRefs.current.delete(item.id);
+                  }}
+                  className={`editor__video${isActive ? " is-active" : ""}`}
+                  src={videoUrl(item, mediaBase)}
+                  controls={isActive}
+                  playsInline
+                  onLoadedMetadata={(event) =>
+                    onLoadedMetadata(item.id, event.currentTarget)
+                  }
+                  onTimeUpdate={(event) =>
+                    onTimeUpdate(item.id, event.currentTarget)
+                  }
+                  onPlay={() => isActive && setPlaying(true)}
+                  onPause={() => {
+                    if (!isActive) return;
+                    if (performance.now() < ignoreUpdates.current) return;
+                    setPlaying(false);
+                  }}
+                  onEnded={() => isActive && setPlaying(false)}
+                />
+              );
+            })}
+            {!activeClip && (
               <p className="editor__missing">The source clip is missing from the library.</p>
             )}
             {plan.overlays
@@ -404,7 +465,7 @@ function Editor({ clip }: { clip: Clip }) {
               variant="secondary"
               icon={playing ? <Pause size={15} /> : <Play size={15} />}
               onClick={() => {
-                const video = videoRef.current;
+                const video = activeVideo();
                 if (!video) return;
                 if (playing) video.pause();
                 else void video.play().catch(() => setPlaying(false));
