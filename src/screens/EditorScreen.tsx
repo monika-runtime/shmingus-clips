@@ -82,10 +82,14 @@ function Editor({ clip }: { clip: Clip }) {
   const [addOpen, setAddOpen] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
   const [stageBox, setStageBox] = useState({ width: 0, height: 0 });
+  const [viewportHeight, setViewportHeight] = useState(
+    typeof window === "undefined" ? 800 : window.innerHeight,
+  );
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const offsets: number[] = [];
   let total = 0;
@@ -127,6 +131,12 @@ function Editor({ clip }: { clip: Clip }) {
   }, [outputHeight]);
 
   useEffect(() => {
+    const onResize = () => setViewportHeight(window.innerHeight);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
     const node = stageRef.current;
     if (!node) return;
     const observer = new ResizeObserver(() => {
@@ -144,8 +154,11 @@ function Editor({ clip }: { clip: Clip }) {
         : activeClip && activeClip.height > 0
           ? activeClip.width / activeClip.height
           : 16 / 9;
-  const availableHeight = Math.max(160, (stageBox.height || 520) - 126);
-  const previewWidth = Math.max(200, Math.min(stageBox.width || 900, availableHeight * ratio));
+  const availableHeight = Math.max(180, viewportHeight - 240);
+  const previewWidth = Math.max(
+    200,
+    Math.min(stageBox.width || 900, availableHeight * ratio),
+  );
   const previewHeight = previewWidth / ratio;
 
   useEffect(() => {
@@ -162,6 +175,12 @@ function Editor({ clip }: { clip: Clip }) {
       const source = segment.startMs + (next - offsets[index]) * segment.speed;
       videoRef.current.currentTime = clamp(source, segment.startMs, segment.endMs) / 1000;
     }
+  }
+
+  function seekFromClientX(clientX: number) {
+    const box = timelineRef.current?.getBoundingClientRect();
+    if (!box || box.width <= 0) return;
+    seek(((clientX - box.left) / box.width) * total);
   }
 
   function onLoadedMetadata() {
@@ -434,10 +453,8 @@ function Editor({ clip }: { clip: Clip }) {
             aria-valuemax={total}
             aria-valuenow={Math.round(playhead)}
             tabIndex={0}
-            onClick={(event) => {
-              const box = event.currentTarget.getBoundingClientRect();
-              seek(((event.clientX - box.left) / box.width) * total);
-            }}
+            ref={timelineRef}
+            onClick={(event) => seekFromClientX(event.clientX)}
           >
             <div className="editor__segments">
               {plan.segments.map((segment, index) => {
@@ -453,7 +470,7 @@ function Editor({ clip }: { clip: Clip }) {
                     onClick={(event) => {
                       event.stopPropagation();
                       setSelected(index);
-                      seek(offsets[index]);
+                      seekFromClientX(event.clientX);
                     }}
                   >
                     <span className="timeline-seg__title">

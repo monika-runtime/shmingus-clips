@@ -1864,11 +1864,10 @@
 /* ------------------------------------------------------------------ */
 
 .page.editor {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow: hidden;
 }
 
 .editor__head {
@@ -1903,18 +1902,17 @@
 }
 
 .editor__body {
-  flex: 1;
-  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 16px;
+  align-items: start;
 }
 
 .editor__stage {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 0;
+  min-width: 0;
 }
 
 .editor__preview {
@@ -2041,8 +2039,6 @@
 }
 
 .editor__side {
-  min-height: 0;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2232,4 +2228,17 @@
 
 .editor-picker__item:hover {
   border-color: var(--border-strong);
+}
+
+
+@media (max-width: 1080px), (max-height: 720px) {
+  .editor__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor__side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: start;
+  }
 }
