@@ -1,5 +1,7 @@
 import {
   ChevronLeft,
+  Pause,
+  Play,
   ChevronRight,
   Film,
   Plus,
@@ -72,16 +74,18 @@ function Editor({ clip }: { clip: Clip }) {
     ],
     overlays: [],
   }));
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
   const [playhead, setPlayhead] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
+  const [stageBox, setStageBox] = useState({ width: 0, height: 0 });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   const offsets: number[] = [];
   let total = 0;
@@ -121,6 +125,28 @@ function Editor({ clip }: { clip: Clip }) {
     observer.observe(node);
     return () => observer.disconnect();
   }, [outputHeight]);
+
+  useEffect(() => {
+    const node = stageRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(() => {
+      setStageBox({ width: node.clientWidth, height: node.clientHeight });
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const ratio =
+    plan.aspect === "vertical"
+      ? 9 / 16
+      : plan.aspect === "square"
+        ? 1
+        : activeClip && activeClip.height > 0
+          ? activeClip.width / activeClip.height
+          : 16 / 9;
+  const availableHeight = Math.max(160, (stageBox.height || 520) - 126);
+  const previewWidth = Math.max(200, Math.min(stageBox.width || 900, availableHeight * ratio));
+  const previewHeight = previewWidth / ratio;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -167,6 +193,7 @@ function Editor({ clip }: { clip: Clip }) {
   }
 
   function patchSegment(change: Partial<EditorSegment>) {
+    if (selected === null) return;
     setPlan((current) => {
       const segments = current.segments.map((segment, index) =>
         index === selected ? { ...segment, ...change } : segment,
@@ -195,14 +222,15 @@ function Editor({ clip }: { clip: Clip }) {
   }
 
   function removeSegment() {
-    if (plan.segments.length <= 1) return;
+    if (selected === null || plan.segments.length <= 1) return;
     const segments = plan.segments.filter((_, index) => index !== selected);
     setPlan({ ...plan, segments });
-    setSelected(Math.max(0, selected - 1));
+    setSelected(null);
     setPlayhead(0);
   }
 
   function moveSegment(direction: -1 | 1) {
+    if (selected === null) return;
     const target = selected + direction;
     if (target < 0 || target >= plan.segments.length) return;
     const segments = [...plan.segments];
@@ -274,8 +302,8 @@ function Editor({ clip }: { clip: Clip }) {
     }
   }
 
-  const selectedSegment = plan.segments[selected];
-  const selectedClip = clipById.get(selectedSegment.clipId);
+  const selectedSegment = selected === null ? null : plan.segments[selected];
+  const selectedClip = selectedSegment ? clipById.get(selectedSegment.clipId) : undefined;
 
   return (
     <div className="page editor">
@@ -308,8 +336,12 @@ function Editor({ clip }: { clip: Clip }) {
       )}
 
       <div className="editor__body">
-        <div className="editor__stage">
-          <div className="editor__preview" ref={previewRef}>
+        <div className="editor__stage" ref={stageRef}>
+          <div
+            className="editor__preview"
+            ref={previewRef}
+            style={{ width: previewWidth, height: previewHeight }}
+          >
             {activeClip ? (
               <video
                 key={activeIndex}
@@ -348,6 +380,19 @@ function Editor({ clip }: { clip: Clip }) {
           </div>
 
           <div className="editor__toolbar">
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={playing ? <Pause size={15} /> : <Play size={15} />}
+              onClick={() => {
+                const video = videoRef.current;
+                if (!video) return;
+                if (playing) video.pause();
+                else void video.play().catch(() => setPlaying(false));
+              }}
+            >
+              {playing ? "Pause" : "Play"}
+            </Button>
             <Button size="sm" variant="secondary" icon={<Plus size={15} />} onClick={() => setAddOpen(true)}>
               Add clip
             </Button>
@@ -356,14 +401,14 @@ function Editor({ clip }: { clip: Clip }) {
             </Button>
             <IconButton
               label="Move segment left"
-              disabled={selected === 0}
+              disabled={selected === null || selected === 0}
               onClick={() => moveSegment(-1)}
             >
               <ChevronLeft size={16} />
             </IconButton>
             <IconButton
               label="Move segment right"
-              disabled={selected >= plan.segments.length - 1}
+              disabled={selected === null || selected >= plan.segments.length - 1}
               onClick={() => moveSegment(1)}
             >
               <ChevronRight size={16} />
@@ -371,7 +416,7 @@ function Editor({ clip }: { clip: Clip }) {
             <IconButton
               label="Delete segment"
               variant="danger"
-              disabled={plan.segments.length <= 1}
+              disabled={selected === null || plan.segments.length <= 1}
               onClick={removeSegment}
             >
               <Trash2 size={16} />
@@ -453,6 +498,15 @@ function Editor({ clip }: { clip: Clip }) {
             </div>
           </section>
 
+          {selected === null || !selectedSegment ? (
+            <section className="editor-card">
+              <h2 className="editor-card__title">Segment</h2>
+              <p className="editor-card__note">
+                Select a segment on the timeline to change its range, speed, framing and audio.
+              </p>
+            </section>
+          ) : (
+            <>
           <section className="editor-card">
             <h2 className="editor-card__title">Segment {selected + 1}</h2>
             {selectedClip ? (
@@ -599,6 +653,8 @@ function Editor({ clip }: { clip: Clip }) {
               isolated game and microphone tracks.
             </p>
           </section>
+            </>
+          )}
 
           <section className="editor-card">
             <div className="editor-card__head">
