@@ -83,7 +83,7 @@ export function ClipCard({ clip, onOpen }: ClipCardProps) {
         },
       },
       {
-        label: shared ? "Share link" : "Share",
+        label: sharing ? "Uploading…" : shared ? "Share link" : "Share",
         icon: Share2,
         disabled: sharing,
         onSelect: () => void share(clip),

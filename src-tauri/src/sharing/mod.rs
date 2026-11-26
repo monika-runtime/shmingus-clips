@@ -8,9 +8,9 @@
 
 mod store;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use reqwest::StatusCode;
@@ -211,10 +211,42 @@ fn transcode_for_share(input: &Path, out: &Path) -> Result<()> {
     Ok(())
 }
 
+/// One upload per clip at a time, even across UI surfaces.
+static SHARING_IN_FLIGHT: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+fn sharing_slot() -> &'static Mutex<HashSet<String>> {
+    SHARING_IN_FLIGHT.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+struct SharingGuard(String);
+
+impl Drop for SharingGuard {
+    fn drop(&mut self) {
+        if let Ok(mut set) = sharing_slot().lock() {
+            set.remove(&self.0);
+        }
+    }
+}
+
 /// Upload `clip` to the configured share server and remember the result.
 ///
 /// The returned share never contains the delete token.
 pub async fn share_clip(clip: &Clip, settings: &Settings) -> Result<ShareInfo> {
+    // A clip that already has a share is never uploaded twice; the stored
+    // record is authoritative even when the interface lost track of it.
+    if let Some(existing) = store().record(&clip.id) {
+        return Ok(existing.share);
+    }
+    let _guard = {
+        let mut in_flight = sharing_slot()
+            .lock()
+            .map_err(|_| AppError::msg("the share queue is unavailable"))?;
+        if !in_flight.insert(clip.id.clone()) {
+            return Err(AppError::msg("This clip is already being shared."));
+        }
+        SharingGuard(clip.id.clone())
+    };
+
     let base = normalize_base_url(&settings.share_base_url)?;
     let mut auth = upload_auth(settings).await?;
     let client = client(UPLOAD_TIMEOUT)?;

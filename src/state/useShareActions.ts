@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { backend } from "../lib/bridge";
 import { errorMessage } from "../lib/errors";
 import type { AuthStatus, Clip, ShareInfo } from "../lib/types";
@@ -24,12 +22,14 @@ export function useShareActions() {
   const {
     settings,
     shares,
+    sharingClipId,
+    setSharingClip,
     setShare,
     openShareDialog,
     openSettings,
     pushToast,
   } = useApp();
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
 
   function offerSignIn(message: string) {
     pushToast("error", message, {
@@ -60,7 +60,23 @@ export function useShareActions() {
       return;
     }
 
-    setUploadingId(clip.id);
+    // The in-memory list can lag behind a share made before this window
+    // opened. Ask the backend before doing any work, so an existing link is
+    // reused instead of uploading a second copy (and no sign-in is needed).
+    let found: ShareInfo | null = null;
+    try {
+      found = await backend.getShare(clip.id);
+    } catch {
+      // Ignored on purpose: share_clip below gives the actionable error.
+    }
+    if (found) {
+      setShare(clip.id, found);
+      openShareDialog(clip, found);
+      return;
+    }
+
+    setSharingClip(clip.id);
+    pushToast("info", `Preparing and uploading “${clip.title}”…`);
     try {
       // A static token is the legacy path and needs no account. Otherwise ask
       // for the Authentik session, and sign in first when there is none.
@@ -98,22 +114,6 @@ export function useShareActions() {
         }
       }
 
-      // The share list travels with the library, but it can lag behind a share
-      // made elsewhere. Ask for this clip first so a second copy is not
-      // uploaded; when the server is unreachable this fails quietly and the
-      // upload below reports the real problem.
-      let found: ShareInfo | null = null;
-      try {
-        found = await backend.getShare(clip.id);
-      } catch {
-        // Ignored on purpose: share_clip below gives the actionable error.
-      }
-      if (found) {
-        setShare(clip.id, found);
-        openShareDialog(clip, found);
-        return;
-      }
-
       const uploaded = await backend.shareClip(clip.id);
       setShare(clip.id, uploaded);
       openShareDialog(clip, uploaded);
@@ -126,13 +126,13 @@ export function useShareActions() {
         pushToast("error", detail);
       }
     } finally {
-      setUploadingId(null);
+      setSharingClip(null);
     }
   }
 
   return {
     share,
-    uploadingId,
-    isUploading: (clipId: string) => uploadingId === clipId,
+    uploadingId: sharingClipId,
+    isUploading: (clipId: string) => sharingClipId === clipId,
   };
 }
