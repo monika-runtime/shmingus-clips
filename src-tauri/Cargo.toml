@@ -1,6 +1,6 @@
 [package]
 name = "shmingus-clips"
-version = "0.5.3"
+version = "0.5.4"
 description = "Local game clip recorder for Linux"
 license = "GPL-2.0-only"
 authors = ["maf"]
