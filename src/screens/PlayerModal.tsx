@@ -36,8 +36,15 @@ export function PlayerModal() {
 }
 
 function PlayerDialog({ clip }: { clip: Clip }) {
-  const { closePlayer, addClip, openPlayer, pushToast, mediaBase, shares } =
-    useApp();
+  const {
+    closePlayer,
+    addClip,
+    openPlayer,
+    pushToast,
+    mediaBase,
+    shares,
+    setShare,
+  } = useApp();
   const { toggleFavorite, rename, remove, exportClip, showExportFolder, reveal } =
     useClipActions();
   const { share, uploadingId } = useShareActions();
@@ -63,6 +70,24 @@ function PlayerDialog({ clip }: { clip: Clip }) {
   const canTrim = duration >= 100;
   const shared = Boolean(shares[clip.id]);
   const sharing = uploadingId === clip.id;
+
+  // The store can lag behind a share made before this window opened; ask the
+  // backend once so the button shows the right state.
+  useEffect(() => {
+    if (shares[clip.id]) return;
+    let active = true;
+    backend
+      .getShare(clip.id)
+      .then((info) => {
+        if (active && info) setShare(clip.id, info);
+      })
+      .catch(() => {
+        // The share simply is not known yet.
+      });
+    return () => {
+      active = false;
+    };
+  }, [clip.id, shares, setShare]);
 
   useEffect(() => {
     if (desktop || !previewPlaying) return;
@@ -156,7 +181,7 @@ function PlayerDialog({ clip }: { clip: Clip }) {
         onSelect: exportNow,
       },
       {
-        label: shared ? "Share link" : "Share",
+        label: sharing ? "Uploading…" : shared ? "Share link" : "Share",
         icon: Share2,
         disabled: busy !== null || sharing,
         onSelect: () => void share(clip),

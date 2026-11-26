@@ -113,6 +113,9 @@ interface Store {
 
   /** Shares known to the server, keyed by clip id. */
   shares: Record<string, ShareInfo>;
+  /** The clip whose share upload is running, if any. Global so every surface agrees. */
+  sharingClipId: string | null;
+  setSharingClip: (clipId: string | null) => void;
   refreshShares: () => Promise<void>;
   setShare: (clipId: string, info: ShareInfo) => void;
   clearShare: (clipId: string) => void;
@@ -216,6 +219,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [clipsError, setClipsError] = useState<string | null>(null);
 
   const [shares, setShares] = useState<Record<string, ShareInfo>>({});
+  const [sharingClipId, setSharingClip] = useState<string | null>(null);
   const [shareDialog, setShareDialog] = useState<ShareDialogState | null>(null);
   const previewShareOpened = useRef(false);
 
@@ -685,6 +689,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     patchClip,
     removeClip,
     shares,
+    sharingClipId,
+    setSharingClip,
     refreshShares,
     setShare,
     clearShare,
