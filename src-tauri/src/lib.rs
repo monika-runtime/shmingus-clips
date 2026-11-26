@@ -18,7 +18,7 @@ mod sound;
 mod state;
 mod tray;
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
@@ -30,6 +30,38 @@ use crate::library::Library;
 use crate::model::{RecorderState, Settings};
 use crate::settings::SettingsStore;
 use crate::state::AppState;
+
+/// Held for the process lifetime: a second copy (even in another login
+/// session, where the D-Bus single-instance plugin cannot see the first) waits
+/// briefly and then exits instead of starting a second GPU-heavy instance.
+static INSTANCE_LOCK: OnceLock<std::fs::File> = OnceLock::new();
+
+fn claim_instance() -> bool {
+    let path = crate::settings::cache_dir().join("instance.lock");
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let Ok(file) = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(&path)
+    else {
+        return true;
+    };
+    // An in-app update starts the new process before the old one exits; give
+    // that handover a moment, then treat the lock as taken by another copy.
+    for _ in 0..40 {
+        match file.try_lock() {
+            Ok(()) => {
+                let _ = INSTANCE_LOCK.set(file);
+                return true;
+            }
+            Err(_) => std::thread::sleep(std::time::Duration::from_millis(100)),
+        }
+    }
+    false
+}
 
 /// Repair environment differences introduced by the AppImage launcher. Call
 /// before anything touches GStreamer (including `--doctor` and `--selftest`).
@@ -104,6 +136,11 @@ pub fn run() {
         ))
         .manage(state)
         .setup(move |app| {
+            if !claim_instance() {
+                log::warn!("another Shmingus Clips instance is already running; exiting");
+                app.cleanup_before_exit();
+                std::process::exit(0);
+            }
             let handle = app.handle().clone();
 
             // The window is up; the next few seconds decide that this launch
