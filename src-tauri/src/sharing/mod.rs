@@ -9,7 +9,7 @@
 mod store;
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -19,6 +19,7 @@ use serde::Deserialize;
 
 use crate::auth;
 use crate::error::{AppError, Result};
+use crate::media;
 use crate::model::{Clip, Settings, ShareInfo, ShareServerStatus};
 
 use store::{ShareRecord, ShareStore};
@@ -51,6 +52,165 @@ struct UploadResponse {
     created_at: String,
 }
 
+/// Share preset: chat clients (Discord above all) will not fetch a large
+/// `og:video`, so anything over this is re-encoded on this machine before it is
+/// uploaded. Clips already inside the cap are sent untouched.
+const SHARE_PRESET_BYTES: u64 = 10 * 1024 * 1024;
+/// Aim slightly under the cap so container overhead cannot push it over.
+const SHARE_PRESET_TARGET: u64 = 9_500_000;
+const SHARE_PRESET_AUDIO_KBPS: f64 = 64.0;
+/// Below this the result would be unwatchable; long clips keep their original
+/// and the server advertises only the thumbnail card.
+const SHARE_PRESET_MIN_VIDEO_KBPS: f64 = 200.0;
+
+struct TempCopy(PathBuf);
+
+impl Drop for TempCopy {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+struct ShareCopy {
+    path: PathBuf,
+    _guard: Option<TempCopy>,
+}
+
+/// The file to upload: the clip itself, or a compact preset copy for large
+/// clips. Building the copy is best effort; on failure the original is used.
+async fn share_source(clip: &Clip) -> ShareCopy {
+    let original = PathBuf::from(&clip.path);
+    let size = std::fs::metadata(&original)
+        .map(|meta| meta.len())
+        .unwrap_or(0);
+    if size <= SHARE_PRESET_BYTES {
+        return ShareCopy {
+            path: original,
+            _guard: None,
+        };
+    }
+
+    let out = crate::settings::cache_dir()
+        .join("share")
+        .join(format!("{}.mp4", uuid::Uuid::new_v4()));
+    if let Some(parent) = out.parent() {
+        if std::fs::create_dir_all(parent).is_err() {
+            return ShareCopy { path: original, _guard: None };
+        }
+    }
+    let input = original.clone();
+    let job_out = out.clone();
+    let job = tokio::task::spawn_blocking(move || transcode_for_share(&input, &job_out)).await;
+    match job {
+        Ok(Ok(())) => {
+            let size = std::fs::metadata(&out).map(|meta| meta.len()).unwrap_or(u64::MAX);
+            if size <= SHARE_PRESET_BYTES {
+                log::info!("share preset: compact copy is {} bytes", size);
+                ShareCopy {
+                    path: out.clone(),
+                    _guard: Some(TempCopy(out)),
+                }
+            } else {
+                let _ = std::fs::remove_file(&out);
+                log::warn!("share preset stayed over 10 MB; uploading the original");
+                ShareCopy { path: original, _guard: None }
+            }
+        }
+        Ok(Err(err)) => {
+            log::warn!("share preset failed ({err}); uploading the original");
+            ShareCopy { path: original, _guard: None }
+        }
+        Err(err) => {
+            log::warn!("share preset task failed ({err}); uploading the original");
+            ShareCopy { path: original, _guard: None }
+        }
+    }
+}
+
+/// Video bitrate and width that should land under the preset cap.
+fn preset_bitrate(duration_ms: u64) -> Option<(u32, u32)> {
+    let seconds = (duration_ms as f64 / 1000.0).max(0.5);
+    let total_kbps = SHARE_PRESET_TARGET as f64 * 8.0 / seconds / 1000.0;
+    let video = total_kbps - SHARE_PRESET_AUDIO_KBPS;
+    if video < SHARE_PRESET_MIN_VIDEO_KBPS {
+        return None;
+    }
+    Some(if video >= 600.0 {
+        (video as u32, 1280)
+    } else if video >= 300.0 {
+        (video as u32, 960)
+    } else {
+        (video as u32, 854)
+    })
+}
+
+fn transcode_for_share(input: &Path, out: &Path) -> Result<()> {
+    let probe = media::probe(input)?;
+    let Some((mut video_kbps, mut width)) = preset_bitrate(probe.duration_ms) else {
+        return Err(AppError::msg(
+            "the clip is too long to fit the 10 MB share preset at a watchable quality",
+        ));
+    };
+
+    for attempt in 0..2 {
+        let scale = format!(
+            "scale='if(gt(iw,ih),min({width},iw),-2)':'if(gt(iw,ih),-2,min({width},ih))'"
+        );
+        let bitrate = format!("{video_kbps}k");
+        let maxrate = format!("{}k", video_kbps * 2);
+        let bufsize = format!("{}k", video_kbps * 4);
+        media::run(
+            "ffmpeg",
+            &[
+                "-y".as_ref(),
+                "-v".as_ref(),
+                "error".as_ref(),
+                "-i".as_ref(),
+                input.as_os_str(),
+                "-map".as_ref(),
+                "0:v:0".as_ref(),
+                "-map".as_ref(),
+                "0:a:0?".as_ref(),
+                "-vf".as_ref(),
+                scale.as_ref(),
+                "-c:v".as_ref(),
+                "libx264".as_ref(),
+                "-preset".as_ref(),
+                "veryfast".as_ref(),
+                "-b:v".as_ref(),
+                bitrate.as_ref(),
+                "-maxrate".as_ref(),
+                maxrate.as_ref(),
+                "-bufsize".as_ref(),
+                bufsize.as_ref(),
+                "-pix_fmt".as_ref(),
+                "yuv420p".as_ref(),
+                "-c:a".as_ref(),
+                "aac".as_ref(),
+                "-b:a".as_ref(),
+                "64k".as_ref(),
+                "-ac".as_ref(),
+                "2".as_ref(),
+                "-movflags".as_ref(),
+                "+faststart".as_ref(),
+                out.as_os_str(),
+            ],
+        )?;
+
+        let size = std::fs::metadata(out).map(|meta| meta.len()).unwrap_or(u64::MAX);
+        if size <= SHARE_PRESET_BYTES {
+            return Ok(());
+        }
+        if attempt == 0 {
+            let ratio = SHARE_PRESET_TARGET as f64 / size as f64 * 0.85;
+            video_kbps = ((video_kbps as f64 * ratio).max(120.0)) as u32;
+            width = width.min(854);
+            let _ = std::fs::remove_file(out);
+        }
+    }
+    Ok(())
+}
+
 /// Upload `clip` to the configured share server and remember the result.
 ///
 /// The returned share never contains the delete token.
@@ -58,8 +218,9 @@ pub async fn share_clip(clip: &Clip, settings: &Settings) -> Result<ShareInfo> {
     let base = normalize_base_url(&settings.share_base_url)?;
     let mut auth = upload_auth(settings).await?;
     let client = client(UPLOAD_TIMEOUT)?;
+    let source = share_source(clip).await;
 
-    let mut response = send_upload(&client, &base, clip, &auth).await?;
+    let mut response = send_upload(&client, &base, clip, &source.path, &auth).await?;
 
     // An Authentik access token can be retired between two uploads (the
     // 60-second expiry margin does not cover a token the server has already
@@ -70,7 +231,7 @@ pub async fn share_clip(clip: &Clip, settings: &Settings) -> Result<ShareInfo> {
             let stale = stale.clone();
             let fresh = auth::refreshed_access_token(&stale).await?;
             auth = UploadAuth::Authentik(fresh);
-            response = send_upload(&client, &base, clip, &auth).await?;
+            response = send_upload(&client, &base, clip, &source.path, &auth).await?;
         }
     }
 
@@ -148,9 +309,10 @@ async fn send_upload(
     client: &reqwest::Client,
     base: &str,
     clip: &Clip,
+    video: &Path,
     auth: &UploadAuth,
 ) -> Result<reqwest::Response> {
-    let form = upload_form(clip).await?;
+    let form = upload_form(clip, video).await?;
     client
         .post(format!("{base}/api/upload"))
         .bearer_auth(auth.token())
@@ -161,13 +323,13 @@ async fn send_upload(
 }
 
 /// Build the multipart body. The video is mandatory; the thumbnail is not.
-async fn upload_form(clip: &Clip) -> Result<Form> {
-    let video = file_part(&clip.path, "video/mp4").await?;
+async fn upload_form(clip: &Clip, video_path: &Path) -> Result<Form> {
+    let video = file_part(video_path, "video/mp4").await?;
     let mut form = Form::new().part("file", video);
 
     if let Some(thumbnail) = &clip.thumbnail {
         if Path::new(thumbnail).is_file() {
-            match file_part(thumbnail, "image/jpeg").await {
+            match file_part(Path::new(thumbnail), "image/jpeg").await {
                 Ok(part) => form = form.part("thumbnail", part),
                 // The thumbnail is a nicety; a share without one is still useful.
                 Err(err) => log::warn!("sharing without a thumbnail: {err}"),
@@ -347,11 +509,11 @@ fn invalid_base_url() -> AppError {
 /// `stream` feature, which this app does not enable (and `Cargo.toml` is not
 /// ours to change). Reading the file into memory is the supported fallback and
 /// is fine for clips up to 512 MB.
-async fn file_part(path: &str, mime: &str) -> Result<Part> {
+async fn file_part(path: &Path, mime: &str) -> Result<Part> {
     let bytes = tokio::fs::read(path)
         .await
-        .map_err(|err| AppError::msg(format!("Could not read {path}: {err}")))?;
-    let name = Path::new(path)
+        .map_err(|err| AppError::msg(format!("Could not read {}: {err}", path.display())))?;
+    let name = path
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| "upload.bin".to_string());
@@ -429,6 +591,79 @@ fn snippet(body: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preset_bitrate_stays_inside_the_cap() {
+        for duration_ms in [5_000u64, 30_000, 120_000, 600_000] {
+            let Some((video_kbps, width)) = super::preset_bitrate(duration_ms) else {
+                continue;
+            };
+            let seconds = duration_ms as f64 / 1000.0;
+            let projected =
+                (video_kbps as f64 + super::SHARE_PRESET_AUDIO_KBPS) * 1000.0 * seconds / 8.0;
+            assert!(
+                projected <= super::SHARE_PRESET_TARGET as f64 * 1.05,
+                "{duration_ms} ms projects {projected} bytes"
+            );
+            assert!(video_kbps >= 120);
+            assert!(width <= 1280);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_large_clip_is_compressed_for_sharing() {
+        if !crate::media::ffmpeg_available() {
+            eprintln!("skipping: ffmpeg unavailable");
+            return;
+        }
+        let dir = std::env::temp_dir().join(format!("share-preset-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let input = dir.join("big.mp4");
+        let status = std::process::Command::new("ffmpeg")
+            .args([
+                "-v", "error", "-y",
+                "-f", "lavfi", "-i",
+                "color=c=gray:s=640x360:r=30:d=2,noise=alls=100:allf=t",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+                "-map", "0:v", "-map", "1:a",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "0",
+                "-c:a", "aac", "-shortest",
+            ])
+            .arg(&input)
+            .status()
+            .expect("run ffmpeg");
+        assert!(status.success());
+        let size = std::fs::metadata(&input).unwrap().len();
+        assert!(size > super::SHARE_PRESET_BYTES, "fixture is only {size} bytes");
+        let probe = crate::media::probe(&input).unwrap();
+
+        let clip = Clip {
+            id: "preset-test".into(),
+            title: "Preset test".into(),
+            game: None,
+            path: input.to_string_lossy().into_owned(),
+            thumbnail: None,
+            created_at: String::new(),
+            duration_ms: probe.duration_ms,
+            size_bytes: size,
+            width: probe.width,
+            height: probe.height,
+            favorite: false,
+        };
+
+        let copy = super::share_source(&clip).await;
+        assert!(copy._guard.is_some(), "expected a temporary preset copy");
+        let out_size = std::fs::metadata(&copy.path).unwrap().len();
+        assert!(
+            out_size <= super::SHARE_PRESET_BYTES,
+            "preset copy is {out_size} bytes"
+        );
+        let out_probe = crate::media::probe(&copy.path).unwrap();
+        assert!(out_probe.audio_streams >= 1);
+        assert!(out_probe.duration_ms > 1500);
+        drop(copy);
+        let _ = std::fs::remove_dir_all(dir);
+    }
 
     #[test]
     fn an_empty_base_url_points_at_the_settings_screen() {

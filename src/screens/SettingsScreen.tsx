@@ -1039,6 +1039,11 @@ export function SettingsScreen() {
                     can watch the clip.
                   </li>
                   <li>
+                    Clips larger than 10 MB are re-encoded on this computer for
+                    the share (up to 720p, under 10 MB) so chat apps can embed
+                    them. Your library keeps the full-quality original.
+                  </li>
+                  <li>
                     Links are permanent until you remove the share. The clip
                     itself stays in your library either way.
                   </li>
