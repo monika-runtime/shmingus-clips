@@ -62,6 +62,7 @@ const SECTIONS: Array<{ id: SettingsSection; label: string; icon: LucideIcon }> 
   { id: "storage", label: "Storage", icon: FolderOpen },
   { id: "sharing", label: "Sharing", icon: Share2 },
   { id: "app", label: "App", icon: SlidersHorizontal },
+  { id: "updates", label: "Updates", icon: Download },
   { id: "diagnostics", label: "Diagnostics", icon: Activity },
 ];
 
@@ -69,6 +70,11 @@ const BUFFER_OPTIONS = [15, 30, 60, 120].map((value) => ({
   value,
   label: `${value}s`,
 }));
+const CUSTOM_BUFFER = -1;
+const BUFFER_CHOICES = [
+  ...BUFFER_OPTIONS,
+  { value: CUSTOM_BUFFER, label: "Custom" },
+];
 
 const FPS_OPTIONS = [30, 60, 120].map((value) => ({
   value,
@@ -203,6 +209,8 @@ export function SettingsScreen() {
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const [updateChecked, setUpdateChecked] = useState(false);
   const [micLevel, setMicLevel] = useState<MicLevel | null>(null);
+  const [customBufferOpen, setCustomBufferOpen] = useState(false);
+  const [customBufferText, setCustomBufferText] = useState("");
   const [micLevelChecked, setMicLevelChecked] = useState(false);
 
   async function checkUpdates() {
@@ -580,10 +588,69 @@ export function SettingsScreen() {
                   >
                     <Segmented
                       label="How far back to keep"
-                      value={draft.bufferSeconds}
-                      options={BUFFER_OPTIONS}
-                      onChange={(value) => patch({ bufferSeconds: value })}
+                      value={
+                        customBufferOpen ||
+                        !BUFFER_OPTIONS.some(
+                          (option) => option.value === draft.bufferSeconds,
+                        )
+                          ? CUSTOM_BUFFER
+                          : draft.bufferSeconds
+                      }
+                      options={BUFFER_CHOICES}
+                      onChange={(value) => {
+                        if (value === CUSTOM_BUFFER) {
+                          setCustomBufferOpen(true);
+                          setCustomBufferText(String(draft.bufferSeconds));
+                          return;
+                        }
+                        setCustomBufferOpen(false);
+                        setCustomBufferText("");
+                        patch({ bufferSeconds: value });
+                      }}
                     />
+                    {(customBufferOpen ||
+                      !BUFFER_OPTIONS.some(
+                        (option) => option.value === draft.bufferSeconds,
+                      )) && (
+                      <div className="inline-field buffer-custom">
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={5}
+                          max={300}
+                          step={1}
+                          aria-label="Seconds to keep"
+                          value={
+                            customBufferText || String(draft.bufferSeconds)
+                          }
+                          onChange={(event) => {
+                            const text = event.target.value;
+                            setCustomBufferText(text);
+                            const seconds = Number(text);
+                            if (
+                              Number.isInteger(seconds) &&
+                              seconds >= 5 &&
+                              seconds <= 300
+                            ) {
+                              patch({ bufferSeconds: seconds });
+                            }
+                          }}
+                          onBlur={() => {
+                            const seconds = Math.round(Number(customBufferText));
+                            if (!Number.isFinite(seconds)) {
+                              setCustomBufferText(String(draft.bufferSeconds));
+                              return;
+                            }
+                            const clamped = Math.min(300, Math.max(5, seconds));
+                            setCustomBufferText(String(clamped));
+                            patch({ bufferSeconds: clamped });
+                          }}
+                        />
+                        <span className="inline-field__value">
+                          seconds (5 to 300)
+                        </span>
+                      </div>
+                    )}
                   </Field>
                 </div>
 
@@ -1148,51 +1215,56 @@ export function SettingsScreen() {
                 onChange={(next) => patch({ softwareRendering: next })}
               />
               </Panel>
-              <Panel
-                title="Updates"
-                actions={
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    icon={updateChecking ? <Spinner /> : <RefreshCw size={15} />}
-                    disabled={!desktop || updateChecking || updateInstalling}
-                    onClick={() => void checkUpdates()}
-                  >
-                    {updateChecking ? "Checking…" : "Check for updates"}
-                  </Button>
-                }
-              >
-                <div className="update-card">
-                  <div className="update-card__body">
-                    <p className="update-card__version">Version {APP_VERSION}</p>
-                    <p className="update-card__note">
-                      {updateInstalling
-                        ? updateProgress === null
-                          ? "Downloading and installing…"
-                          : `Downloading and installing… ${updateProgress}%`
-                        : updateInfo
-                          ? `Version ${updateInfo.version} is ready to install.`
-                          : updateChecked
-                            ? "You are on the latest version."
-                            : "Checked at launch; you can check any time."}
-                    </p>
-                  </div>
-                  {updateInfo && !updateInstalling && (
-                    <Button
-                      variant="primary"
-                      icon={<Download size={15} />}
-                      onClick={() => void installUpdate()}
-                    >
-                      Install and restart
-                    </Button>
-                  )}
+            </>
+          )}
+
+          {settingsSection === "updates" && (
+            <>
+            <Panel
+              title="Updates"
+              actions={
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={updateChecking ? <Spinner /> : <RefreshCw size={15} />}
+                  disabled={!desktop || updateChecking || updateInstalling}
+                  onClick={() => void checkUpdates()}
+                >
+                  {updateChecking ? "Checking…" : "Check for updates"}
+                </Button>
+              }
+            >
+              <div className="update-card">
+                <div className="update-card__body">
+                  <p className="update-card__version">Version {APP_VERSION}</p>
+                  <p className="update-card__note">
+                    {updateInstalling
+                      ? updateProgress === null
+                        ? "Downloading and installing…"
+                        : `Downloading and installing… ${updateProgress}%`
+                      : updateInfo
+                        ? `Version ${updateInfo.version} is ready to install.`
+                        : updateChecked
+                          ? "You are on the latest version."
+                          : "Checked at launch and every 12 hours; you can check any time."}
+                  </p>
                 </div>
-                {updateError && (
-                  <Alert tone="warn" title="Update check failed">
-                    {updateError}
-                  </Alert>
+                {updateInfo && !updateInstalling && (
+                  <Button
+                    variant="primary"
+                    icon={<Download size={15} />}
+                    onClick={() => void installUpdate()}
+                  >
+                    Install and restart
+                  </Button>
                 )}
-              </Panel>
+              </div>
+              {updateError && (
+                <Alert tone="warn" title="Update check failed">
+                  {updateError}
+                </Alert>
+              )}
+            </Panel>
             </>
           )}
 

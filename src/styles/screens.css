@@ -1858,3 +1858,12 @@
   color: var(--text-faint);
   font-size: 11.5px;
 }
+.buffer-custom {
+  margin-top: 8px;
+}
+
+.buffer-custom .input {
+  width: 110px;
+  flex: none;
+}
+

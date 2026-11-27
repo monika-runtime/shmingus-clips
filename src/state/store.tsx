@@ -43,6 +43,7 @@ export type SettingsSection =
   | "storage"
   | "sharing"
   | "app"
+  | "updates"
   | "diagnostics";
 
 export interface ShareDialogState {
@@ -295,15 +296,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Look for a newer release once the window has settled. Found versions show a
-  // banner that stays until dismissed; nothing installs on its own.
+  // Look for a newer release shortly after launch and every twelve hours a
+  // session stays open. A found version shows the dismissible banner; nothing
+  // installs on its own.
   useEffect(() => {
     if (!desktop) return;
     let active = true;
-    const timer = window.setTimeout(() => {
+    const check = () => {
       void checkForUpdate()
         .then((info) => {
-          if (!active || !info) return;
+          if (!active) return;
+          if (!info) {
+            setUpdate(null);
+            return;
+          }
           let dismissed = "";
           try {
             dismissed =
@@ -316,12 +322,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (dismissed !== info.version) setUpdate(info);
         })
         .catch(() => {
-          // Offline, or the release feed refused: the Updates panel can retry.
+          // Offline, or the release feed refused: the Updates tab can retry.
         });
-    }, 6000);
+    };
+    const first = window.setTimeout(check, 6000);
+    const every = window.setInterval(check, 12 * 60 * 60 * 1000);
     return () => {
       active = false;
-      window.clearTimeout(timer);
+      window.clearTimeout(first);
+      window.clearInterval(every);
     };
   }, [desktop]);
 
