@@ -2262,3 +2262,58 @@
   width: 110px;
   flex: none;
 }
+
+/* ------------------------------------------------------------------ */
+/* Shared clips manager                                                */
+/* ------------------------------------------------------------------ */
+
+.share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+}
+
+.share-list__text {
+  min-width: 0;
+}
+
+.share-list__title {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.share-list__meta {
+  color: var(--text-faint);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.share-list__url {
+  color: var(--text-muted);
+}
+
+.share-list__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.share-list__remove {
+  color: var(--danger);
+}
+
+.share-list__empty {
+  color: var(--text-faint);
+  font-size: 12px;
+}
