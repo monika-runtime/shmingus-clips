@@ -64,6 +64,14 @@ impl ShareStore {
             }
         };
 
+        // The file holds delete tokens; keep it private even if an older build
+        // created it with default permissions.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+        }
+
         Self {
             path,
             inner: Mutex::new(records),
@@ -141,6 +149,11 @@ impl ShareStore {
         let json = serde_json::to_string_pretty(records)?;
         let temp = self.path.with_extension("json.tmp");
         std::fs::write(&temp, json)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o600));
+        }
         if let Err(err) = std::fs::rename(&temp, &self.path) {
             let _ = std::fs::remove_file(&temp);
             return Err(AppError::from(err));
