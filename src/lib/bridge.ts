@@ -38,6 +38,13 @@ export const backend = {
   runSelftest: () => call(api.runSelftest, previewBackend.runSelftest),
   getAudioDevices: () =>
     call(api.getAudioDevices, previewBackend.getAudioDevices),
+  listServerShares: () =>
+    call(api.listServerShares, previewBackend.listServerShares),
+  deleteServerShare: (id: string) =>
+    call(
+      () => api.deleteServerShare(id),
+      () => previewBackend.deleteServerShare(id),
+    ),
   micLevel: () => call(api.micLevel, previewBackend.micLevel),
   startMicMonitor: () => call(api.startMicMonitor, previewBackend.startMicMonitor),
   stopMicMonitor: () => call(api.stopMicMonitor, previewBackend.stopMicMonitor),

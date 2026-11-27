@@ -20,7 +20,7 @@ use serde::Deserialize;
 use crate::auth;
 use crate::error::{AppError, Result};
 use crate::media;
-use crate::model::{Clip, Settings, ShareInfo, ShareServerStatus};
+use crate::model::{Clip, ServerShare, Settings, ShareInfo, ShareServerStatus};
 
 use store::{ShareRecord, ShareStore};
 
@@ -307,34 +307,30 @@ pub async fn share_clip(clip: &Clip, settings: &Settings) -> Result<ShareInfo> {
     Ok(info)
 }
 
-/// Which credential an upload carries.
+/// Which credential an upload carries. Uploads are account-only.
 enum UploadAuth {
     /// A fresh Authentik access token, obtained (and refreshed) locally.
     Authentik(String),
-    /// The legacy static token from Settings, for signed-out installs.
-    Static(String),
 }
 
 impl UploadAuth {
     fn token(&self) -> &str {
         match self {
-            Self::Authentik(token) | Self::Static(token) => token,
+            Self::Authentik(token) => token,
         }
     }
 }
 
 /// Pick the credential for this upload: Authentik when signed in, otherwise the
 /// static token. With neither, the upload cannot work - say what to do.
-async fn upload_auth(settings: &Settings) -> Result<UploadAuth> {
+async fn upload_auth(_settings: &Settings) -> Result<UploadAuth> {
     if auth::is_signed_in() {
         let token = auth::access_token().await?;
         return Ok(UploadAuth::Authentik(token));
     }
-
-    match bearer_token(settings.share_token.as_deref()) {
-        Some(token) => Ok(UploadAuth::Static(token.to_string())),
-        None => Err(AppError::msg("Sign in with Authentik to upload clips.")),
-    }
+    Err(AppError::msg(
+        "Sign in with your Shmingus account to upload clips.",
+    ))
 }
 
 async fn send_upload(
@@ -382,6 +378,59 @@ pub fn get_share(clip_id: &str) -> Option<ShareInfo> {
 /// Every remembered share, clip id -> share.
 pub fn list_shares() -> HashMap<String, ShareInfo> {
     store().all()
+}
+
+/// Every share the signed-in account owns, as the server sees it.
+pub async fn list_account_shares(settings: &Settings) -> Result<Vec<ServerShare>> {
+    let base = normalize_base_url(&settings.share_base_url)?;
+    let credential = upload_auth(settings).await?;
+    let client = client(Duration::from_secs(12))?;
+    let response = client
+        .get(format!("{base}/api/shares"))
+        .bearer_auth(credential.token())
+        .send()
+        .await
+        .map_err(|err| {
+            AppError::msg(format!("Could not reach the share server at {base}: {err}"))
+        })?;
+    let status = response.status();
+    if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
+        return Err(AppError::msg(
+            "Sign in with your Shmingus account to see your shares.",
+        ));
+    }
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        return Err(with_snippet(
+            format!("Could not list your shares (HTTP {})", status.as_u16()),
+            &body,
+        ));
+    }
+    response
+        .json::<Vec<ServerShare>>()
+        .await
+        .map_err(|err| AppError::msg(format!("The share server sent an unexpected list: {err}")))
+}
+
+/// Delete a share by its server id using the account's own session.
+pub async fn delete_server_share(settings: &Settings, id: &str) -> Result<()> {
+    let base = normalize_base_url(&settings.share_base_url)?;
+    let credential = upload_auth(settings).await?;
+    let client = client(Duration::from_secs(12))?;
+    let response = client
+        .delete(format!("{base}/api/shares/{id}"))
+        .bearer_auth(credential.token())
+        .send()
+        .await
+        .map_err(|err| {
+            AppError::msg(format!("Could not reach the share server at {base}: {err}"))
+        })?;
+    let status = response.status();
+    if status.is_success() || status == StatusCode::NOT_FOUND {
+        return Ok(());
+    }
+    let body = response.text().await.unwrap_or_default();
+    Err(delete_error(status, &body))
 }
 
 /// Keep the public page in step with a rename. Best effort: the caller has
@@ -478,10 +527,7 @@ pub async fn test_share_server(settings: &Settings) -> Result<ShareServerStatus>
     let base = normalize_base_url(&settings.share_base_url)?;
     let client = client(HEALTH_TIMEOUT)?;
 
-    let mut request = client.get(format!("{base}/healthz"));
-    if let Some(token) = bearer_token(settings.share_token.as_deref()) {
-        request = request.bearer_auth(token);
-    }
+    let request = client.get(format!("{base}/healthz"));
 
     match request.send().await {
         Ok(response) => {
@@ -572,18 +618,10 @@ fn client(timeout: Duration) -> Result<reqwest::Client> {
         .map_err(|err| AppError::msg(format!("could not start the HTTP client: {err}")))
 }
 
-/// An upload token is optional; blank or whitespace-only is the same as unset.
-fn bearer_token(token: Option<&str>) -> Option<&str> {
-    token.map(str::trim).filter(|token| !token.is_empty())
-}
-
 fn upload_error(status: StatusCode, body: &str, auth: &UploadAuth) -> AppError {
     match (status.as_u16(), auth) {
         (401 | 403, UploadAuth::Authentik(_)) => AppError::msg(
             "The share server rejected your Authentik sign-in. Sign in again, then retry the upload.",
-        ),
-        (401 | 403, UploadAuth::Static(_)) => AppError::msg(
-            "The share server rejected the upload token. Check the upload token in Settings → Sharing.",
         ),
         (413, _) => AppError::msg("The share server refused the clip because it is too large."),
         (code, _) => with_snippet(format!("Upload failed (HTTP {code})"), body),
@@ -751,13 +789,6 @@ mod tests {
     }
 
     #[test]
-    fn blank_upload_tokens_are_treated_as_unset() {
-        assert_eq!(bearer_token(Some("  secret ")), Some("secret"));
-        assert_eq!(bearer_token(Some("   ")), None);
-        assert_eq!(bearer_token(None), None);
-    }
-
-    #[test]
     fn error_bodies_are_collapsed_and_shortened() {
         assert_eq!(snippet("  bad\n\nrequest  "), "bad request");
         let long = "x".repeat(SNIPPET_CHARS + 50);
@@ -777,14 +808,4 @@ mod tests {
         assert!(err.contains("rejected your Authentik sign-in"), "{err}");
     }
 
-    #[test]
-    fn a_rejected_static_token_still_points_at_the_settings_screen() {
-        let err = upload_error(
-            StatusCode::UNAUTHORIZED,
-            "",
-            &UploadAuth::Static("static-token".into()),
-        )
-        .to_string();
-        assert!(err.contains("upload token in Settings"), "{err}");
-    }
 }

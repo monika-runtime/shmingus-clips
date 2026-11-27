@@ -12,7 +12,7 @@ use tauri::{AppHandle, Emitter, State};
 use crate::error::Result;
 use crate::model::{
     AudioDevice, AuthStatus, Clip, EnvironmentReport, GameInfo, MicLevel, RecorderStatus,
-    SavedMonitor, SelfTestReport, Settings, ShareInfo, ShareServerStatus,
+    SavedMonitor, SelfTestReport, ServerShare, Settings, ShareInfo, ShareServerStatus,
 };
 use crate::state::AppState;
 use crate::{auth, diagnostics, events, sharing, shortcuts};
@@ -312,6 +312,20 @@ pub async fn list_shares() -> Result<HashMap<String, ShareInfo>> {
 #[tauri::command]
 pub async fn delete_share(id: String) -> Result<()> {
     sharing::delete_share(&id).await
+}
+
+/// Shares owned by the signed-in account, so another machine or a fresh
+/// install can still see and remove them.
+#[tauri::command]
+pub async fn list_server_shares(state: State<'_, AppState>) -> Result<Vec<ServerShare>> {
+    let settings = state.settings.get();
+    sharing::list_account_shares(&settings).await
+}
+
+#[tauri::command]
+pub async fn delete_server_share(state: State<'_, AppState>, id: String) -> Result<()> {
+    let settings = state.settings.get();
+    sharing::delete_server_share(&settings, &id).await
 }
 
 #[tauri::command]

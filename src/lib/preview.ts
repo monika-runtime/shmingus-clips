@@ -8,6 +8,7 @@ import type {
   RecorderStatus,
   SavedMonitor,
   SelfTestReport,
+  ServerShare,
   Settings,
   ShareInfo,
   ShareServerStatus,
@@ -125,7 +126,6 @@ let settings: Settings = {
   notifyOnClip: true,
   clipSound: true,
   shareBaseUrl: "https://clips.shmingus.net",
-  shareToken: null,
   softwareRendering: false,
   maxWidth: 2560,
 };
@@ -518,6 +518,12 @@ export const previewBackend = {
       ],
     };
   },
+
+  async listServerShares(): Promise<ServerShare[]> {
+    return [];
+  },
+
+  async deleteServerShare(_id: string): Promise<void> {},
 
   async micLevel(): Promise<MicLevel | null> {
     return { rmsDb: -26.5 + Math.sin(Date.now() / 700) * 8, peakDb: -12 };

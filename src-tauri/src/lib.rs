@@ -283,6 +283,8 @@ pub fn run() {
             commands::get_share,
             commands::list_shares,
             commands::delete_share,
+            commands::list_server_shares,
+            commands::delete_server_share,
             commands::test_share_server,
             commands::auth_status,
             commands::auth_login,

@@ -12,6 +12,7 @@ import type {
   SavedMonitor,
   SelfTestReport,
   Settings,
+  ServerShare,
   ShareInfo,
   ShareServerStatus,
   Toast,
@@ -63,6 +64,8 @@ export const api = {
   /** Every share on the server, keyed by clip id. */
   listShares: () => invoke<Record<string, ShareInfo>>("list_shares"),
   deleteShare: (id: string) => invoke<void>("delete_share", { id }),
+  listServerShares: () => invoke<ServerShare[]>("list_server_shares"),
+  deleteServerShare: (id: string) => invoke<void>("delete_server_share", { id }),
   testShareServer: () => invoke<ShareServerStatus>("test_share_server"),
 
   /** The Authentik account signed in on this machine, if any. */
