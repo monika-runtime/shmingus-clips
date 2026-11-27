@@ -2253,3 +2253,12 @@
     align-items: start;
   }
 }
+
+.buffer-custom {
+  margin-top: 8px;
+}
+
+.buffer-custom .input {
+  width: 110px;
+  flex: none;
+}
