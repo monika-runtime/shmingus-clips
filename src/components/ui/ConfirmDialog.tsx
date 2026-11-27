@@ -24,7 +24,12 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const titleId = useId();
   return (
-    <Modal onClose={onCancel} labelledBy={titleId} className="modal--confirm">
+    <Modal
+      onClose={onCancel}
+      labelledBy={titleId}
+      className="modal--confirm"
+      lockScroll={false}
+    >
       <div className="confirm">
         <span className="confirm__icon" aria-hidden="true">
           <AlertTriangle size={20} />

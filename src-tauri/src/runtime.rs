@@ -94,7 +94,7 @@ const STARTUP_TOKEN_ENV: &str = "SHMINGUS_CLIPS_STARTUP_TOKEN";
 const COMPAT_AUTO_NOTE: &str = "compatibility-auto-enabled";
 /// Failed startups before Compatibility rendering turns itself on. A clean
 /// start or exit clears the count, so only a real hard crash counts.
-const CRASHES_BEFORE_COMPAT: u32 = 1;
+const CRASHES_BEFORE_COMPAT: u32 = 3;
 
 /// Call before the webview starts. If the previous launches died during
 /// startup, switch to Compatibility rendering; otherwise record this attempt.
