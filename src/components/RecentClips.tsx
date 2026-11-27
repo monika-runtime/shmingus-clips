@@ -28,7 +28,7 @@ function RecentItem({
   clip: Clip;
   onOpen: (clip: Clip) => void;
 }) {
-  const { requestRename, shares, openEditor } = useApp();
+  const { requestRename, shares } = useApp();
   const { toggleFavorite, remove, exportClip, reveal } = useClipActions();
   const { share, uploadingId } = useShareActions();
   const { openContextMenu } = useContextMenu();
@@ -63,11 +63,6 @@ function RecentItem({
           setExporting(true);
           void exportClip(clip).finally(() => setExporting(false));
         },
-      },
-      {
-        label: "Edit clip",
-        icon: Film,
-        onSelect: () => openEditor(clip),
       },
       {
         label: sharing ? "Uploading…" : shared ? "Manage share" : "Share",
