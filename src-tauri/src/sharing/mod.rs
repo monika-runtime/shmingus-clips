@@ -435,9 +435,18 @@ pub async fn delete_share(clip_id: &str) -> Result<()> {
     );
     let client = client(DELETE_TIMEOUT)?;
 
-    let response = client
+    let mut request = client
         .delete(&url)
-        .header("X-Delete-Token", record.delete_token.as_str())
+        .header("X-Delete-Token", record.delete_token.as_str());
+    // The uploader's account may delete its own share even without the token,
+    // which is what makes the manager work after a reinstall.
+    if auth::is_signed_in() {
+        match auth::access_token().await {
+            Ok(token) => request = request.bearer_auth(token),
+            Err(err) => log::warn!("could not attach the account to the share delete: {err}"),
+        }
+    }
+    let response = request
         .send()
         .await
         .map_err(|err| {
