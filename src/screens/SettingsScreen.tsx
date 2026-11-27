@@ -41,7 +41,7 @@ import { errorMessage } from "../lib/errors";
 import { formatBytes, formatDateTime, pluralize, signature } from "../lib/format";
 import { previewAuthSample } from "../lib/preview";
 import { checkForUpdate, downloadAndInstall, type UpdateInfo } from "../lib/updates";
-import type { MicLevel } from "../lib/types";
+import type { MicLevel, ServerShare } from "../lib/types";
 import {
   applyTheme,
   storedTheme,
@@ -217,6 +217,10 @@ export function SettingsScreen() {
   const [customBufferOpen, setCustomBufferOpen] = useState(false);
   const [confirmShareId, setConfirmShareId] = useState<string | null>(null);
   const [shareBusyId, setShareBusyId] = useState<string | null>(null);
+  const [serverShares, setServerShares] = useState<ServerShare[]>([]);
+  const [serverSharesError, setServerSharesError] = useState<string | null>(null);
+  const [serverSharesLoading, setServerSharesLoading] = useState(false);
+  const [confirmServerShare, setConfirmServerShare] = useState<ServerShare | null>(null);
   const [customBufferText, setCustomBufferText] = useState("");
   const [micLevelChecked, setMicLevelChecked] = useState(false);
 
@@ -265,6 +269,7 @@ export function SettingsScreen() {
       await backend.deleteShare(clipId);
       clearShare(clipId);
       pushToast("success", "Share link removed. The clip is still in your library.");
+      void refreshServerShares();
     } catch (error) {
       pushToast("error", `Could not remove the share: ${errorMessage(error)}`);
     } finally {
@@ -272,6 +277,53 @@ export function SettingsScreen() {
       setConfirmShareId(null);
     }
   }
+
+  async function refreshServerShares() {
+    if (!desktop) return;
+    setServerSharesLoading(true);
+    try {
+      const list = await backend.listServerShares();
+      setServerShares(list);
+      setServerSharesError(null);
+    } catch (error) {
+      setServerSharesError(errorMessage(error));
+    } finally {
+      setServerSharesLoading(false);
+    }
+  }
+
+  async function removeServerShare(id: string) {
+    setShareBusyId(id);
+    try {
+      await backend.deleteServerShare(id);
+      setServerShares((list) => list.filter((share) => share.id !== id));
+      pushToast("success", "Share link removed from the server.");
+    } catch (error) {
+      pushToast("error", `Could not remove the share: ${errorMessage(error)}`);
+    } finally {
+      setShareBusyId(null);
+      setConfirmServerShare(null);
+    }
+  }
+
+  async function copyUrl(url: string) {
+    const ok = await copyText(url);
+    pushToast(
+      ok ? "success" : "error",
+      ok ? "Link copied." : "Could not copy the link; select it by hand.",
+    );
+  }
+
+  useEffect(() => {
+    if (!desktop || settingsSection !== "sharing") return;
+    if (auth?.signedIn) {
+      void refreshServerShares();
+    } else if (auth) {
+      setServerShares([]);
+      setServerSharesError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desktop, settingsSection, auth?.signedIn]);
 
   useEffect(() => {
     setDraft((current) => current ?? settings);
@@ -474,6 +526,7 @@ export function SettingsScreen() {
           "success",
           `Signed in as ${status.name ?? status.sub ?? "your Shmingus account"}.`,
         );
+        void refreshServerShares();
       } else {
         setAuthError("Sign-in did not finish. Try again.");
       }
@@ -557,6 +610,13 @@ export function SettingsScreen() {
       clip: clips.find((clip) => clip.id === clipId),
     }))
     .sort((a, b) => Date.parse(b.info.createdAt) - Date.parse(a.info.createdAt));
+
+  const localShareIds = new Set(
+    Object.values(shares).map((share) => share.id),
+  );
+  const remoteShares = serverShares.filter(
+    (share) => !localShareIds.has(share.id),
+  );
 
   return (
     <div className="page">
@@ -1086,7 +1146,7 @@ export function SettingsScreen() {
                 title="Shared clips"
                 description="Copy a link again or take it off the server without opening the clip."
               >
-                {sharedEntries.length === 0 ? (
+                {sharedEntries.length === 0 && remoteShares.length === 0 ? (
                   <p className="share-list__empty">No clips are shared yet.</p>
                 ) : (
                   <ul className="share-list">
@@ -1122,7 +1182,43 @@ export function SettingsScreen() {
                         </div>
                       </li>
                     ))}
+                    {remoteShares.map((share) => (
+                      <li key={share.id} className="share-list__item">
+                        <div className="share-list__text">
+                          <p className="share-list__title">{share.title}</p>
+                          <p className="share-list__meta">
+                            {formatDateTime(share.createdAt)} ·{" "}
+                            <span className="share-list__url">{share.url}</span>
+                          </p>
+                        </div>
+                        <div className="share-list__actions">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => void copyUrl(share.url)}
+                          >
+                            Copy link
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="share-list__remove"
+                            icon={<Trash2 size={14} />}
+                            disabled={shareBusyId === share.id}
+                            onClick={() => setConfirmServerShare(share)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
                   </ul>
+                )}
+                {serverSharesLoading && (
+                  <p className="share-list__empty">Checking your account…</p>
+                )}
+                {serverSharesError && (
+                  <p className="share-list__empty">{serverSharesError}</p>
                 )}
               </Panel>
 
@@ -1588,6 +1684,16 @@ export function SettingsScreen() {
           busy={shareBusyId === confirmShareId}
           onCancel={() => setConfirmShareId(null)}
           onConfirm={() => void removeShare(confirmShareId)}
+        />
+      )}
+
+      {confirmServerShare && (
+        <ConfirmDialog
+          title="Remove this share?"
+          message="The public link stops working immediately. This affects the account, not only this computer."
+          busy={shareBusyId === confirmServerShare.id}
+          onCancel={() => setConfirmServerShare(null)}
+          onConfirm={() => void removeServerShare(confirmServerShare.id)}
         />
       )}
     </div>

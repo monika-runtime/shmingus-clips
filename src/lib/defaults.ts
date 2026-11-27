@@ -34,7 +34,6 @@ export const DEFAULT_SETTINGS: Settings = {
   notifyOnClip: true,
   clipSound: true,
   shareBaseUrl: "https://clips.shmingus.net",
-  shareToken: null,
   softwareRendering: false,
   maxWidth: 1920,
 };

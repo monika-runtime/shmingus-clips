@@ -81,7 +81,6 @@ export interface Settings {
   /** Base URL of the self-hosted share service, empty when sharing is off. */
   shareBaseUrl: string;
   /** Optional upload token for the share service. */
-  shareToken: string | null;
   /** Compatibility: draw the interface with software rendering. */
   softwareRendering: boolean;
   maxWidth: number;
@@ -182,6 +181,16 @@ export interface AuthStatus {
   sub: string | null;
   /** RFC 3339 access-token expiry. */
   expiresAt: string | null;
+}
+
+export interface ServerShare {
+  id: string;
+  title: string;
+  game: string;
+  url: string;
+  embedUrl: string;
+  videoUrl: string;
+  createdAt: string;
 }
 
 export interface ShareServerStatus {

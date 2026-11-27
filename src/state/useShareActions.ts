@@ -78,40 +78,35 @@ export function useShareActions() {
     setSharingClip(clip.id);
     pushToast("info", `Preparing and uploading “${clip.title}”…`);
     try {
-      // A static token is the legacy path and needs no account. Otherwise ask
-      // for the Authentik session, and sign in first when there is none.
-      if (!settings.shareToken?.trim()) {
-        let auth: AuthStatus | null = null;
-        try {
-          auth = await backend.authStatus();
-        } catch {
-          // An older build without auth commands cannot answer. Let the upload
-          // report the real problem instead of blocking a legacy server.
-          auth = null;
-        }
+      // Uploads are account-only. Sign in first when there is no session.
+      let auth: AuthStatus | null = null;
+      try {
+        auth = await backend.authStatus();
+      } catch {
+        // An older build without auth commands cannot answer. Let the upload
+        // report the real problem.
+        auth = null;
+      }
 
-        if (auth && !auth.signedIn) {
-          pushToast(
-            "info",
-            "Opening your browser to sign in to your Shmingus account…",
-          );
-          try {
-            auth = await backend.authLogin();
-          } catch (error) {
-            offerSignIn(`Could not sign in: ${errorMessage(error)}`);
-            return;
-          }
-          if (!auth.signedIn) {
-            offerSignIn(
-              "Sign-in did not finish. Sign in, then share the clip again.",
-            );
-            return;
-          }
-          pushToast(
-            "success",
-            `Signed in as ${auth.name ?? auth.sub ?? "your Shmingus account"}.`,
-          );
+      if (auth && !auth.signedIn) {
+        pushToast(
+          "info",
+          "Opening your browser to sign in to your Shmingus account…",
+        );
+        try {
+          auth = await backend.authLogin();
+        } catch (error) {
+          offerSignIn(`Could not sign in: ${errorMessage(error)}`);
+          return;
         }
+        if (!auth.signedIn) {
+          offerSignIn("Sign-in did not finish. Sign in, then share the clip again.");
+          return;
+        }
+        pushToast(
+          "success",
+          `Signed in as ${auth.name ?? auth.sub ?? "your Shmingus account"}.`,
+        );
       }
 
       const uploaded = await backend.shareClip(clip.id);

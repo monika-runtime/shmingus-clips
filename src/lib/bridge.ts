@@ -43,6 +43,14 @@ export const backend = {
       () => api.renderEdit(plan),
       () => previewBackend.renderEdit(plan),
     ),
+  listServerShares: () =>
+    call(api.listServerShares, previewBackend.listServerShares),
+  deleteServerShare: (id: string) =>
+    call(
+      () => api.deleteServerShare(id),
+      () => previewBackend.deleteServerShare(id),
+    ),
+    ),
   micLevel: () => call(api.micLevel, previewBackend.micLevel),
   startMicMonitor: () => call(api.startMicMonitor, previewBackend.startMicMonitor),
   stopMicMonitor: () => call(api.stopMicMonitor, previewBackend.stopMicMonitor),

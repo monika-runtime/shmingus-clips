@@ -108,8 +108,6 @@ pub struct Settings {
     pub clip_sound: bool,
     /// Base URL of the self-hosted share service, e.g. https://clips.shmingus.net
     pub share_base_url: String,
-    /// Optional upload token (the service can also run without auth).
-    pub share_token: Option<String>,
     /// Compatibility: draw with software rendering. Works around WebKitGTK's
     /// DMA-BUF crash on some NVIDIA Wayland setups, at the cost of smoothness.
     pub software_rendering: bool,
@@ -137,7 +135,6 @@ impl Default for Settings {
             notify_on_clip: true,
             clip_sound: true,
             share_base_url: "https://clips.shmingus.net".into(),
-            share_token: None,
             software_rendering: false,
             max_width: 1920,
         }
@@ -353,6 +350,19 @@ pub struct AuthStatus {
     pub sub: Option<String>,
     /// RFC 3339 access-token expiry, when signed in.
     pub expires_at: Option<String>,
+}
+
+/// A share as listed by the server for the signed-in account.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerShare {
+    pub id: String,
+    pub title: String,
+    pub game: String,
+    pub url: String,
+    pub embed_url: String,
+    pub video_url: String,
+    pub created_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
