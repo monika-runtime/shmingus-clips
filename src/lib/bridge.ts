@@ -50,7 +50,6 @@ export const backend = {
       () => api.deleteServerShare(id),
       () => previewBackend.deleteServerShare(id),
     ),
-    ),
   micLevel: () => call(api.micLevel, previewBackend.micLevel),
   startMicMonitor: () => call(api.startMicMonitor, previewBackend.startMicMonitor),
   stopMicMonitor: () => call(api.stopMicMonitor, previewBackend.stopMicMonitor),
