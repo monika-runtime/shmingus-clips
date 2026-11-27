@@ -193,6 +193,13 @@ export interface ServerShare {
   createdAt: string;
 }
 
+export interface ServerRequirement {
+  required: boolean;
+  currentVersion: string;
+  minVersion: string | null;
+  serverVersion: string | null;
+}
+
 export interface ShareServerStatus {
   ok: boolean;
   detail: string;

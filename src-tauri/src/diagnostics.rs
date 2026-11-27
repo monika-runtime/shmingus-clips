@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use crate::error::Result;
-use crate::model::{CheckResult, EnvironmentReport, SelfTestReport};
+use crate::model::{CheckResult, EnvironmentReport, Settings, SelfTestReport};
 
 fn command_ok(program: &str, args: &[&str]) -> bool {
     Command::new(program)
@@ -66,6 +66,119 @@ fn check(
         ok,
         detail: detail.into(),
     });
+}
+
+/// Plain-text snapshot for a bug report: versions, session, GPU, portal
+/// checks and the non-secret settings. Never includes tokens.
+pub fn bug_report(settings: &Settings) -> String {
+    let mut out = String::new();
+    let os = std::fs::read_to_string("/etc/os-release")
+        .ok()
+        .and_then(|text| {
+            text.lines()
+                .find_map(|line| line.strip_prefix("PRETTY_NAME="))
+                .map(|value| value.trim_matches('"').to_string())
+        })
+        .unwrap_or_else(|| "unknown".into());
+    let session = std::env::var("XDG_SESSION_TYPE").unwrap_or_else(|_| "unknown".into());
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_else(|_| "unknown".into());
+    let appimage = std::env::var("APPIMAGE").unwrap_or_else(|_| "no".into());
+    let compat_env = std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").ok();
+
+    out.push_str("Shmingus Clips bug report\n");
+    out.push_str(&format!("generated: {}\n", chrono::Utc::now().to_rfc3339()));
+    out.push_str("\n[app]\n");
+    out.push_str(&format!("version: {}\n", env!("CARGO_PKG_VERSION")));
+    out.push_str(&format!("bundle: net.shmingus.clips\n"));
+    out.push_str(&format!("appimage: {appimage}\n"));
+    out.push_str(&format!(
+        "compatibility rendering: setting={} env={}\n",
+        settings.software_rendering,
+        compat_env.as_deref().unwrap_or("unset")
+    ));
+
+    out.push_str("\n[system]\n");
+    out.push_str(&format!("os: {os}\n"));
+    out.push_str(&format!(
+        "kernel: {}\n",
+        command_output("uname", &["-r"]).unwrap_or_else(|| "unknown".into())
+    ));
+    out.push_str(&format!("session: {session} / {desktop}\n"));
+    out.push_str(&format!(
+        "wayland display: {}\n",
+        if std::env::var_os("WAYLAND_DISPLAY").is_some() { "yes" } else { "no" }
+    ));
+    if let Some(lspci) = command_output("lspci", &["-nn"]) {
+        let gpus: Vec<&str> = lspci
+            .lines()
+            .filter(|line| line.contains("VGA compatible") || line.contains("3D controller"))
+            .collect();
+        out.push_str(&format!("gpu: {}\n", if gpus.is_empty() { "unknown".into() } else { gpus.join(" | ") }));
+    }
+    if let Some(info) = command_output("pactl", &["info"]) {
+        let server = info
+            .lines()
+            .find_map(|line| line.strip_prefix("Server Name:"))
+            .map(str::trim)
+            .unwrap_or("unknown");
+        out.push_str(&format!("audio server: {server}\n"));
+    }
+    for (label, program, arg) in [
+        ("ffmpeg", "ffmpeg", "-version"),
+        ("ffprobe", "ffprobe", "-version"),
+        ("gstreamer", "gst-inspect-1.0", "--version"),
+    ] {
+        let version = command_output(program, &[arg])
+            .and_then(|text| text.lines().next().map(str::to_string))
+            .unwrap_or_else(|| "not found".into());
+        out.push_str(&format!("{label}: {version}\n"));
+    }
+
+    out.push_str("\n[environment]\n");
+    for check in environment_report().checks {
+        out.push_str(&format!(
+            "{} {}: {}\n",
+            if check.ok { "[ok]" } else { "[missing]" },
+            check.label,
+            check.detail
+        ));
+    }
+
+    out.push_str("\n[settings]\n");
+    out.push_str(&format!(
+        "buffer: {}s, {} fps, {} Mbps, encoder {:?}, max width {}\n",
+        settings.buffer_seconds, settings.fps, settings.bitrate_mbps, settings.encoder, settings.max_width
+    ));
+    out.push_str(&format!(
+        "audio: desktop={} {:.0}%, mic={} {:.0}%, device={}\n",
+        settings.audio.desktop_enabled,
+        settings.audio.desktop_volume * 100.0,
+        settings.audio.mic_enabled,
+        settings.audio.mic_volume * 100.0,
+        settings.audio.mic_device.as_deref().unwrap_or("system default")
+    ));
+    out.push_str(&format!(
+        "capture: {}\n",
+        settings
+            .capture_monitor
+            .as_ref()
+            .map(|monitor| monitor.name.as_str())
+            .unwrap_or("not selected")
+    ));
+    out.push_str(&format!(
+        "hotkeys: save={}, buffer={}, mic={}\n",
+        settings.hotkeys.save_clip, settings.hotkeys.toggle_buffer, settings.hotkeys.toggle_mic
+    ));
+    out.push_str(&format!(
+        "share server: {}\n",
+        if settings.share_base_url.trim().is_empty() {
+            "off"
+        } else {
+            settings.share_base_url.trim()
+        }
+    ));
+    out.push_str("\nNo tokens or passwords are included.\n");
+    out
 }
 
 /// Full environment report used by the setup screen and the `--doctor` flag.

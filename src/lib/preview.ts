@@ -9,12 +9,13 @@ import type {
   RecorderStatus,
   SavedMonitor,
   SelfTestReport,
+  ServerRequirement,
   ServerShare,
   Settings,
   ShareInfo,
   ShareServerStatus,
 } from "./types";
-import { DEFAULT_HOTKEYS } from "./defaults";
+import { APP_VERSION, DEFAULT_HOTKEYS } from "./defaults";
 
 /**
  * Browser preview backend.
@@ -520,6 +521,25 @@ export const previewBackend = {
     };
   },
 
+  async bugReport(): Promise<string> {
+    return [
+      "Shmingus Clips bug report",
+      "generated: preview",
+      "",
+      "[app]",
+      `version: ${APP_VERSION}`,
+      "bundle: net.shmingus.clips",
+      "appimage: no",
+      "compatibility rendering: setting=false env=unset",
+      "",
+      "[system]",
+      "os: Preview browser",
+      "session: browser",
+      "",
+      "No tokens or passwords are included.",
+    ].join("\n");
+  },
+
   async renderEdit(plan: EditPlan): Promise<Clip> {
     await wait(200);
     const first = clips.find((clip) => clip.id === plan.segments[0]?.clipId);
@@ -717,6 +737,15 @@ export const previewBackend = {
   async deleteShare(_id: string): Promise<void> {
     await wait(120);
     throw new Error(SHARE_UNAVAILABLE);
+  },
+
+  async serverRequirement(): Promise<ServerRequirement> {
+    return {
+      required: false,
+      currentVersion: APP_VERSION,
+      minVersion: null,
+      serverVersion: "preview",
+    };
   },
 
   async testShareServer(): Promise<ShareServerStatus> {

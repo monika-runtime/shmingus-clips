@@ -20,7 +20,9 @@ use serde::Deserialize;
 use crate::auth;
 use crate::error::{AppError, Result};
 use crate::media;
-use crate::model::{Clip, ServerShare, Settings, ShareInfo, ShareServerStatus};
+use crate::model::{
+    Clip, ServerRequirement, ServerShare, Settings, ShareInfo, ShareServerStatus,
+};
 
 use store::{ShareRecord, ShareStore};
 
@@ -248,6 +250,16 @@ pub async fn share_clip(clip: &Clip, settings: &Settings) -> Result<ShareInfo> {
     };
 
     let base = normalize_base_url(&settings.share_base_url)?;
+    // Catch a server that has moved on before any upload is attempted.
+    if let Ok(requirement) = server_requirement(settings).await {
+        if requirement.required {
+            let minimum = requirement.min_version.unwrap_or_default();
+            return Err(AppError::msg(format!(
+                "This share server needs Shmingus Clips {minimum} or newer (this build is {}). Update Shmingus Clips to share clips.",
+                requirement.current_version
+            )));
+        }
+    }
     let mut auth = upload_auth(settings).await?;
     let client = client(UPLOAD_TIMEOUT)?;
     let source = share_source(clip).await;
@@ -378,6 +390,72 @@ pub fn get_share(clip_id: &str) -> Option<ShareInfo> {
 /// Every remembered share, clip id -> share.
 pub fn list_shares() -> HashMap<String, ShareInfo> {
     store().all()
+}
+
+/// Compare dotted versions numerically; pre-release suffixes are ignored.
+fn version_at_least(current: &str, minimum: &str) -> bool {
+    let parse = |value: &str| -> Vec<u64> {
+        value
+            .split('.')
+            .map(|part| {
+                part.chars()
+                    .take_while(|ch| ch.is_ascii_digit())
+                    .collect::<String>()
+                    .parse()
+                    .unwrap_or(0)
+            })
+            .collect()
+    };
+    let mut a = parse(current);
+    let mut b = parse(minimum);
+    a.resize(3, 0);
+    b.resize(3, 0);
+    a >= b
+}
+
+/// Ask the server which client it still supports.
+pub async fn server_requirement(settings: &Settings) -> Result<ServerRequirement> {
+    let base = normalize_base_url(&settings.share_base_url)?;
+    let client = client(HEALTH_TIMEOUT)?;
+    let response = client
+        .get(format!("{base}/healthz"))
+        .send()
+        .await
+        .map_err(|err| {
+            AppError::msg(format!("Could not reach the share server at {base}: {err}"))
+        })?;
+    let status = response.status();
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|err| AppError::msg(format!("The share server health reply was unreadable: {err}")))?;
+    if !status.is_success() {
+        return Err(AppError::msg(format!(
+            "The share server health check failed (HTTP {})",
+            status.as_u16()
+        )));
+    }
+    let min_version = body
+        .get("minClientVersion")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
+    let server_version = body
+        .get("version")
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    let current_version = env!("CARGO_PKG_VERSION").to_string();
+    let required = min_version
+        .as_deref()
+        .map(|minimum| !version_at_least(&current_version, minimum))
+        .unwrap_or(false);
+    Ok(ServerRequirement {
+        required,
+        current_version,
+        min_version,
+        server_version,
+    })
 }
 
 /// Every share the signed-in account owns, as the server sees it.
@@ -670,6 +748,15 @@ fn snippet(body: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn version_compare_handles_short_and_suffixed_versions() {
+        assert!(version_at_least("0.5.10", "0.5.9"));
+        assert!(!version_at_least("0.5.9", "0.5.10"));
+        assert!(version_at_least("1.0", "1.0.0"));
+        assert!(version_at_least("0.6.0", "0.5.9"));
+        assert!(!version_at_least("0.5.9-beta", "0.5.10"));
+    }
 
     #[test]
     fn preset_bitrate_stays_inside_the_cap() {
