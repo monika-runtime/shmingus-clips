@@ -181,7 +181,7 @@ function PlayerDialog({ clip }: { clip: Clip }) {
         onSelect: exportNow,
       },
       {
-        label: sharing ? "Uploading…" : shared ? "Share link" : "Share",
+        label: sharing ? "Uploading…" : shared ? "Manage share" : "Share",
         icon: Share2,
         disabled: busy !== null || sharing,
         onSelect: () => void share(clip),
@@ -424,7 +424,7 @@ function PlayerDialog({ clip }: { clip: Clip }) {
               disabled={busy !== null || sharing}
               onClick={() => void share(clip)}
             >
-              {sharing ? "Uploading…" : shared ? "Share link" : "Share"}
+              {sharing ? "Uploading…" : shared ? "Manage share" : "Share"}
             </Button>
             <Button
               icon={<FolderOpen size={16} />}

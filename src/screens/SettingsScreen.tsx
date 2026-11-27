@@ -14,6 +14,7 @@ import {
   Share2,
   ShieldCheck,
   SlidersHorizontal,
+  Trash2,
   Volume2,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Alert } from "../components/ui/Alert";
 import { Badge, Chip } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Field } from "../components/ui/Field";
 import { Hotkey } from "../components/ui/Hotkey";
 import { Input } from "../components/ui/Input";
@@ -32,10 +34,11 @@ import { Slider } from "../components/ui/Slider";
 import { Spinner } from "../components/ui/Spinner";
 import { Switch } from "../components/ui/Switch";
 import { backend, chooseDirectory, isDesktop } from "../lib/bridge";
+import { copyText } from "../lib/clipboard";
 import { cx } from "../lib/cx";
 import { APP_VERSION, DEFAULT_HOTKEYS } from "../lib/defaults";
 import { errorMessage } from "../lib/errors";
-import { formatBytes, pluralize, signature } from "../lib/format";
+import { formatBytes, formatDateTime, pluralize, signature } from "../lib/format";
 import { previewAuthSample } from "../lib/preview";
 import { checkForUpdate, downloadAndInstall, type UpdateInfo } from "../lib/updates";
 import type { MicLevel } from "../lib/types";
@@ -176,6 +179,8 @@ export function SettingsScreen() {
     chooseMonitor,
     busy,
     clips,
+    shares,
+    clearShare,
     environment,
     environmentError,
     environmentBusy,
@@ -210,6 +215,8 @@ export function SettingsScreen() {
   const [updateChecked, setUpdateChecked] = useState(false);
   const [micLevel, setMicLevel] = useState<MicLevel | null>(null);
   const [customBufferOpen, setCustomBufferOpen] = useState(false);
+  const [confirmShareId, setConfirmShareId] = useState<string | null>(null);
+  const [shareBusyId, setShareBusyId] = useState<string | null>(null);
   const [customBufferText, setCustomBufferText] = useState("");
   const [micLevelChecked, setMicLevelChecked] = useState(false);
 
@@ -239,6 +246,30 @@ export function SettingsScreen() {
       setUpdateError(errorMessage(error));
       setUpdateInstalling(false);
       setUpdateProgress(null);
+    }
+  }
+
+  async function copyShareLink(clipId: string) {
+    const info = shares[clipId];
+    if (!info) return;
+    const ok = await copyText(info.url);
+    pushToast(
+      ok ? "success" : "error",
+      ok ? "Link copied." : "Could not copy the link; select it by hand.",
+    );
+  }
+
+  async function removeShare(clipId: string) {
+    setShareBusyId(clipId);
+    try {
+      await backend.deleteShare(clipId);
+      clearShare(clipId);
+      pushToast("success", "Share link removed. The clip is still in your library.");
+    } catch (error) {
+      pushToast("error", `Could not remove the share: ${errorMessage(error)}`);
+    } finally {
+      setShareBusyId(null);
+      setConfirmShareId(null);
     }
   }
 
@@ -518,6 +549,14 @@ export function SettingsScreen() {
   const failingRequired = environment
     ? environment.checks.filter((check) => !check.ok && check.required).length
     : 0;
+
+  const sharedEntries = Object.entries(shares)
+    .map(([clipId, info]) => ({
+      clipId,
+      info,
+      clip: clips.find((clip) => clip.id === clipId),
+    }))
+    .sort((a, b) => Date.parse(b.info.createdAt) - Date.parse(a.info.createdAt));
 
   return (
     <div className="page">
@@ -1044,6 +1083,50 @@ export function SettingsScreen() {
               </Panel>
 
               <Panel
+                title="Shared clips"
+                description="Copy a link again or take it off the server without opening the clip."
+              >
+                {sharedEntries.length === 0 ? (
+                  <p className="share-list__empty">No clips are shared yet.</p>
+                ) : (
+                  <ul className="share-list">
+                    {sharedEntries.map(({ clipId, info, clip }) => (
+                      <li key={clipId} className="share-list__item">
+                        <div className="share-list__text">
+                          <p className="share-list__title">
+                            {clip?.title ?? "Missing clip"}
+                          </p>
+                          <p className="share-list__meta">
+                            {formatDateTime(info.createdAt)} ·{" "}
+                            <span className="share-list__url">{info.url}</span>
+                          </p>
+                        </div>
+                        <div className="share-list__actions">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => void copyShareLink(clipId)}
+                          >
+                            Copy link
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="share-list__remove"
+                            icon={<Trash2 size={14} />}
+                            disabled={shareBusyId === clipId}
+                            onClick={() => setConfirmShareId(clipId)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+
+              <Panel
                 title="Share server"
                 description="Send a clip to your own share server and get a link you can paste into chat."
                 actions={
@@ -1497,6 +1580,16 @@ export function SettingsScreen() {
           </div>
         </div>
       </div>
+
+      {confirmShareId && (
+        <ConfirmDialog
+          title="Remove this share?"
+          message="The public link stops working immediately. The clip stays on this computer."
+          busy={shareBusyId === confirmShareId}
+          onCancel={() => setConfirmShareId(null)}
+          onConfirm={() => void removeShare(confirmShareId)}
+        />
+      )}
     </div>
   );
 }
