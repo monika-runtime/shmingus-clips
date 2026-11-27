@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Pencil,
   Play,
+  Share2,
   Star,
   Trash2,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import type { Clip } from "../lib/types";
 import { useContextMenu } from "../state/contextMenu";
 import { useApp } from "../state/store";
 import { useClipActions } from "../state/useClipActions";
+import { useShareActions } from "../state/useShareActions";
 import { ClipThumb } from "./ClipThumb";
 import { Button } from "./ui/Button";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
@@ -26,12 +28,15 @@ function RecentItem({
   clip: Clip;
   onOpen: (clip: Clip) => void;
 }) {
-  const { requestRename } = useApp();
+  const { requestRename, shares, openEditor } = useApp();
   const { toggleFavorite, remove, exportClip, reveal } = useClipActions();
+  const { share, uploadingId } = useShareActions();
   const { openContextMenu } = useContextMenu();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const shared = Boolean(shares[clip.id]);
+  const sharing = uploadingId === clip.id;
 
   function openMenu(event: ReactMouseEvent<HTMLElement>) {
     event.preventDefault();
@@ -58,6 +63,17 @@ function RecentItem({
           setExporting(true);
           void exportClip(clip).finally(() => setExporting(false));
         },
+      },
+      {
+        label: "Edit clip",
+        icon: Film,
+        onSelect: () => openEditor(clip),
+      },
+      {
+        label: sharing ? "Uploading…" : shared ? "Manage share" : "Share",
+        icon: Share2,
+        disabled: sharing,
+        onSelect: () => void share(clip),
       },
       { separator: true },
       {
@@ -88,7 +104,7 @@ function RecentItem({
       {confirmOpen && (
         <ConfirmDialog
           title="Delete this clip?"
-          message={`“${clip.title}” and its file will be removed from disk. This cannot be undone.`}
+          message={`“${clip.title}” and its file will be removed from disk.${shared ? " Its public share link will be removed first." : ""} This cannot be undone.`}
           busy={removing}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={() => {

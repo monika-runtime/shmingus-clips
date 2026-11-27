@@ -1,11 +1,15 @@
 import {
+  ClipboardCopy,
   Library,
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { backend } from "../lib/bridge";
+import { copyText } from "../lib/clipboard";
 import { APP_VERSION } from "../lib/defaults";
+import { errorMessage } from "../lib/errors";
 import { useApp, type Route } from "../state/store";
 import { Toasts } from "./ui/Toasts";
 import { SetupBanner } from "./SetupBanner";
@@ -17,13 +21,35 @@ const NAV: Array<{ route: Route; label: string; icon: LucideIcon }> = [
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { mode, route, navigate, settingsSection, toasts, dismissToast } =
-    useApp();
+  const {
+    mode,
+    route,
+    navigate,
+    settingsSection,
+    toasts,
+    dismissToast,
+    pushToast,
+  } = useApp();
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [route, settingsSection]);
+
+  async function copyBugReport() {
+    try {
+      const report = await backend.bugReport();
+      const ok = await copyText(report);
+      pushToast(
+        ok ? "success" : "error",
+        ok
+          ? "Bug report copied to the clipboard."
+          : "Could not copy the bug report.",
+      );
+    } catch (error) {
+      pushToast("error", `Could not collect the bug report: ${errorMessage(error)}`);
+    }
+  }
 
   return (
     <div className="app">
@@ -73,6 +99,15 @@ export function Shell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="rail__bottom">
+          <button
+            type="button"
+            className="rail__report"
+            title="Copy bug report information"
+            aria-label="Copy bug report information"
+            onClick={() => void copyBugReport()}
+          >
+            <ClipboardCopy size={15} aria-hidden="true" />
+          </button>
           <span className="rail__version">v{APP_VERSION}</span>
           {mode === "preview" && (
             <span className="rail__preview" title="Seed data - no Tauri runtime">

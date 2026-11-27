@@ -336,3 +336,21 @@
     padding-top: 28px;
   }
 }
+
+.rail__report {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.rail__report:hover {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+}

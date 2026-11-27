@@ -36,6 +36,7 @@ export const backend = {
   checkEnvironment: () =>
     call(api.checkEnvironment, previewBackend.checkEnvironment),
   runSelftest: () => call(api.runSelftest, previewBackend.runSelftest),
+  bugReport: () => call(api.bugReport, previewBackend.bugReport),
   getAudioDevices: () =>
     call(api.getAudioDevices, previewBackend.getAudioDevices),
   listServerShares: () =>
@@ -123,6 +124,8 @@ export const backend = {
     ),
   testShareServer: () =>
     call(api.testShareServer, previewBackend.testShareServer),
+  serverRequirement: () =>
+    call(api.serverRequirement, previewBackend.serverRequirement),
 
   authStatus: () => call(api.authStatus, previewBackend.authStatus),
   authLogin: () => call(api.authLogin, previewBackend.authLogin),

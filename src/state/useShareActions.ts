@@ -24,6 +24,7 @@ export function useShareActions() {
     shares,
     sharingClipId,
     setSharingClip,
+    setRequiredClientVersion,
     setShare,
     openShareDialog,
     openSettings,
@@ -58,6 +59,27 @@ export function useShareActions() {
         },
       );
       return;
+    }
+
+    // A server that has moved on rejects older builds; check before any
+    // sign-in or upload so the banner can say what is needed.
+    try {
+      const requirement = await backend.serverRequirement();
+      if (requirement.required) {
+        setRequiredClientVersion(requirement.minVersion);
+        pushToast(
+          "error",
+          `This share server needs Shmingus Clips ${requirement.minVersion ?? "a newer build"} or newer.`,
+          {
+            label: "Open updates",
+            run: () => openSettings("updates"),
+          },
+        );
+        return;
+      }
+      setRequiredClientVersion(null);
+    } catch {
+      // Health unreachable: the upload below reports the real problem.
     }
 
     // The in-memory list can lag behind a share made before this window

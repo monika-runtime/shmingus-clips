@@ -117,6 +117,9 @@ interface Store {
   /** The clip whose share upload is running, if any. Global so every surface agrees. */
   sharingClipId: string | null;
   setSharingClip: (clipId: string | null) => void;
+  /** Set when the share server needs a newer client than this build. */
+  requiredClientVersion: string | null;
+  setRequiredClientVersion: (version: string | null) => void;
   refreshShares: () => Promise<void>;
   setShare: (clipId: string, info: ShareInfo) => void;
   clearShare: (clipId: string) => void;
@@ -221,6 +224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [shares, setShares] = useState<Record<string, ShareInfo>>({});
   const [sharingClipId, setSharingClip] = useState<string | null>(null);
+  const [requiredClientVersion, setRequiredClientVersion] = useState<string | null>(null);
   const [shareDialog, setShareDialog] = useState<ShareDialogState | null>(null);
   const previewShareOpened = useRef(false);
 
@@ -295,6 +299,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return null;
     });
   }, []);
+
+  // The share server can demand a newer client; check when the URL is known.
+  useEffect(() => {
+    if (!desktop) return;
+    const url = settings?.shareBaseUrl.trim();
+    if (!url) {
+      setRequiredClientVersion(null);
+      return;
+    }
+    let active = true;
+    void backend
+      .serverRequirement()
+      .then((requirement) => {
+        if (!active) return;
+        setRequiredClientVersion(
+          requirement.required ? requirement.minVersion : null,
+        );
+      })
+      .catch(() => {
+        // Unreachable server: leaving sharing alone gives the real error later.
+      });
+    return () => {
+      active = false;
+    };
+  }, [desktop, settings?.shareBaseUrl]);
 
   // Look for a newer release shortly after launch and every twelve hours a
   // session stays open. A found version shows the dismissible banner; nothing
@@ -700,6 +729,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     shares,
     sharingClipId,
     setSharingClip,
+    requiredClientVersion,
+    setRequiredClientVersion,
     refreshShares,
     setShare,
     clearShare,

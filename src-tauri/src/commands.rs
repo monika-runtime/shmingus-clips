@@ -12,7 +12,8 @@ use tauri::{AppHandle, Emitter, State};
 use crate::error::Result;
 use crate::model::{
     AudioDevice, AuthStatus, Clip, EnvironmentReport, GameInfo, MicLevel, RecorderStatus,
-    SavedMonitor, SelfTestReport, ServerShare, Settings, ShareInfo, ShareServerStatus,
+    SavedMonitor, SelfTestReport, ServerRequirement, ServerShare, Settings, ShareInfo,
+    ShareServerStatus,
 };
 use crate::state::AppState;
 use crate::{auth, diagnostics, events, sharing, shortcuts};
@@ -64,6 +65,12 @@ pub async fn get_media_base(state: State<'_, AppState>) -> Result<String> {
 #[tauri::command]
 pub async fn check_environment() -> Result<EnvironmentReport> {
     Ok(diagnostics::environment_report())
+}
+
+/// Plain-text bug report for the clipboard. No secrets.
+#[tauri::command]
+pub async fn bug_report(state: State<'_, AppState>) -> Result<String> {
+    Ok(diagnostics::bug_report(&state.settings.get()))
 }
 
 #[tauri::command]
@@ -326,6 +333,13 @@ pub async fn list_server_shares(state: State<'_, AppState>) -> Result<Vec<Server
 pub async fn delete_server_share(state: State<'_, AppState>, id: String) -> Result<()> {
     let settings = state.settings.get();
     sharing::delete_server_share(&settings, &id).await
+}
+
+/// Whether this build is new enough for the configured share server.
+#[tauri::command]
+pub async fn server_requirement(state: State<'_, AppState>) -> Result<ServerRequirement> {
+    let settings = state.settings.get();
+    sharing::server_requirement(&settings).await
 }
 
 #[tauri::command]

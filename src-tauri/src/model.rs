@@ -365,6 +365,16 @@ pub struct ServerShare {
     pub created_at: String,
 }
 
+/// Whether this build is new enough for the configured share server.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerRequirement {
+    pub required: bool,
+    pub current_version: String,
+    pub min_version: Option<String>,
+    pub server_version: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShareServerStatus {

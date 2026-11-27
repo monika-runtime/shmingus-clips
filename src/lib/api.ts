@@ -12,6 +12,7 @@ import type {
   SavedMonitor,
   SelfTestReport,
   Settings,
+  ServerRequirement,
   ServerShare,
   ShareInfo,
   ShareServerStatus,
@@ -28,6 +29,7 @@ export const api = {
 
   checkEnvironment: () => invoke<EnvironmentReport>("check_environment"),
   runSelftest: () => invoke<SelfTestReport>("run_selftest"),
+  bugReport: () => invoke<string>("bug_report"),
   getAudioDevices: () => invoke<AudioDevice[]>("get_audio_devices"),
   micLevel: () => invoke<MicLevel | null>("mic_level"),
   startMicMonitor: () => invoke<void>("start_mic_level_monitor"),
@@ -67,6 +69,7 @@ export const api = {
   listServerShares: () => invoke<ServerShare[]>("list_server_shares"),
   deleteServerShare: (id: string) => invoke<void>("delete_server_share", { id }),
   testShareServer: () => invoke<ShareServerStatus>("test_share_server"),
+  serverRequirement: () => invoke<ServerRequirement>("server_requirement"),
 
   /** The Authentik account signed in on this machine, if any. */
   authStatus: () => invoke<AuthStatus>("auth_status"),
