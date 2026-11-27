@@ -14,11 +14,13 @@ interface ModalProps {
   children: ReactNode;
   className?: string;
   onContextMenu?: MouseEventHandler<HTMLDivElement>;
+  /** Off for short confirmations, where hiding the page scroll makes it jump. */
+  lockScroll?: boolean;
 }
 
 let scrollLocks = 0;
 
-function lockScroll() {
+function lockPageScroll() {
   scrollLocks += 1;
   if (scrollLocks === 1) {
     document.documentElement.style.overflow = "hidden";
@@ -26,7 +28,7 @@ function lockScroll() {
   }
 }
 
-function unlockScroll() {
+function unlockPageScroll() {
   scrollLocks = Math.max(0, scrollLocks - 1);
   if (scrollLocks === 0) {
     document.documentElement.style.overflow = "";
@@ -43,6 +45,7 @@ export function Modal({
   children,
   className,
   onContextMenu,
+  lockScroll = true,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
@@ -90,10 +93,10 @@ export function Modal({
     };
 
     dialog.addEventListener("keydown", onKeyDown);
-    lockScroll();
+    if (lockScroll) lockPageScroll();
     return () => {
       dialog.removeEventListener("keydown", onKeyDown);
-      unlockScroll();
+      if (lockScroll) unlockPageScroll();
       if (previous instanceof HTMLElement) previous.focus();
     };
   }, []);
